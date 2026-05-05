@@ -1,0 +1,8 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "supervisor": "./agents/host_agent/async_agent.py:graph",
+    "financial_researcher": "./agents/graph_financial_researcher.py:graph",
+    "wiki_querier": "./agents/graph_wiki_querier.py:graph"
+  }
+}
