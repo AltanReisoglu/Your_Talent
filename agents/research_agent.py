@@ -10,6 +10,7 @@ bulgular ve kaynak URL'leri döner (ham metin/HTML değil).
 """
 
 from tools.serverless.tavily_search import internet_search
+from agents.model_config import finwiki_model
 
 # ── Two-Step CoT Prompts ──────────────────────────────────────────────────────
 RESEARCH_ANALYSIS_PROMPT = """\
@@ -87,7 +88,7 @@ financial_researcher = {
         "Do NOT include raw search JSON, full HTML, or verbose logs. "
         "Keep your response under 500 words.",
     "tools": [internet_search],
-    "model": "google_genai:gemini-3.1-pro-preview",
+    "model": finwiki_model(),
 }
 
 # A second-step synthesis could be a separate subagent, but for now we keep it

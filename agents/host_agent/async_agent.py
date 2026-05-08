@@ -16,6 +16,8 @@ from langgraph.checkpoint.memory import MemorySaver
 from agents.fanout_agent import fanout_synthesizer
 from agents.host_agent.agent import ORCHESTRATOR_PROMPT, general_purpose
 from agents.ingest_agent import wiki_ingestor
+from agents.memory_config import FINWIKI_MEMORY_FILES, FINWIKI_MEMORY_PERMISSIONS
+from agents.model_config import finwiki_model
 from tools.serverless.tavily_search import internet_search
 from tools.serverless.wiki_manager import (
     append_log,
@@ -25,6 +27,12 @@ from tools.serverless.wiki_manager import (
     read_wiki_page,
     register_source,
     search_wiki,
+    verify_wiki_claim,
+    freshness_report,
+    source_lineage,
+    observe_agent_event,
+    append_audit,
+    redact_private_data,
     update_index,
     upsert_wiki_page,
     write_wiki_page,
@@ -76,7 +84,7 @@ def get_async_agent():
     """Build the optional async fan-out FinWiki supervisor."""
     checkpointer = MemorySaver()
     return create_deep_agent(
-        model="google_genai:gemini-3.1-pro-preview",
+        model=finwiki_model(),
         tools=[
             internet_search,
             read_wiki_page,
@@ -89,6 +97,12 @@ def get_async_agent():
             read_source_manifest,
             search_wiki,
             lint_wiki,
+            verify_wiki_claim,
+            freshness_report,
+            source_lineage,
+            observe_agent_event,
+            append_audit,
+            redact_private_data,
         ],
         system_prompt=ASYNC_FANOUT_PROMPT,
         subagents=[
@@ -98,7 +112,8 @@ def get_async_agent():
             wiki_ingestor,
         ],
         skills=["/skills/"],
-        memory=["/AGENTS.md"],
+        memory=FINWIKI_MEMORY_FILES,
+        permissions=FINWIKI_MEMORY_PERMISSIONS,
         checkpointer=checkpointer,
         debug=False,
         name="finwiki-async-fanout-orchestrator",

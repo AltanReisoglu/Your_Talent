@@ -10,7 +10,10 @@ from tools.serverless.wiki_manager import (
     list_wiki_pages,
     lint_wiki,
     read_source_manifest,
+    freshness_report,
+    source_lineage,
 )
+from agents.model_config import finwiki_model
 
 LINT_SYSTEM_PROMPT = """\
 You are the Wiki Linter — a maintenance agent that keeps the knowledge base healthy.
@@ -26,8 +29,12 @@ You are the Wiki Linter — a maintenance agent that keeps the knowledge base he
 ## Workflow
 1. Prefer `lint_wiki()` for the deterministic full health report.
 2. Use `read_source_manifest()` to inspect source ingestion coverage.
-3. Use `list_wiki_pages()` and `read_wiki_page(...)` only for follow-up detail.
-4. Produce a structured lint report.
+3. Use `freshness_report()` when the user asks for freshness, stale pages, or
+   data decay. This is especially important for market, company, macro, and
+   regulation pages.
+4. Use `source_lineage(page_path=...)` when the report needs provenance gaps.
+5. Use `list_wiki_pages()` and `read_wiki_page(...)` only for follow-up detail.
+6. Produce a structured lint report.
 
 ## Report Format
 ```
@@ -78,6 +85,8 @@ wiki_linter = {
         list_wiki_pages,
         lint_wiki,
         read_source_manifest,
+        freshness_report,
+        source_lineage,
     ],
-    "model": "google_genai:gemini-3.1-pro-preview",
+    "model": finwiki_model(),
 }

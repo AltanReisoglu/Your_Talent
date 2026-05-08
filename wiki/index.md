@@ -23,5 +23,17 @@ total_pages: 0
 ## Macroeconomics
 <!-- Agent tarafından doldurulacak -->
 
+## Regulation
+<!-- Agent tarafından doldurulacak -->
+
+## Risk
+<!-- Agent tarafından doldurulacak -->
+
+## Models
+<!-- Agent tarafından doldurulacak -->
+
+## Sources
+<!-- Agent tarafından doldurulacak -->
+
 ## Strategies
 <!-- Agent tarafından doldurulacak -->

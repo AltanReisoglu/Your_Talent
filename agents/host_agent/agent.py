@@ -28,6 +28,12 @@ from tools.serverless.wiki_manager import (
     read_source_manifest,
     search_wiki,
     lint_wiki,
+    verify_wiki_claim,
+    freshness_report,
+    source_lineage,
+    observe_agent_event,
+    append_audit,
+    redact_private_data,
 )
 
 from agents.research_agent import financial_researcher
@@ -35,6 +41,8 @@ from agents.ingest_agent import wiki_ingestor
 from agents.query_agent import wiki_querier
 from agents.lint_agent import wiki_linter
 from agents.fanout_agent import fanout_synthesizer
+from agents.memory_config import FINWIKI_MEMORY_FILES, FINWIKI_MEMORY_PERMISSIONS
+from agents.model_config import finwiki_model
 
 # ── General-Purpose Override ────────────────────────────────────────────────────
 # Deep Agents auto-adds a `general-purpose` subagent. We override it here
@@ -53,7 +61,7 @@ general_purpose = {
         "For specialized tasks the orchestrator handles routing."
     ),
     "tools": [read_wiki_page, list_wiki_pages],
-    "model": "google_genai:gemini-3.1-pro-preview",
+    "model": finwiki_model(),
 }
 
 # ── Orchestrator Prompt ───────────────────────────────────────────────────────
@@ -158,6 +166,20 @@ Do NOT use fan-out for simple concepts, quick wiki lookup, greetings, or lint.
   layer. The manifest records which sources updated which pages.
 - **Contradiction handling**: when new information conflicts with existing wiki
   claims, preserve both with dates and sources instead of silently overwriting.
+- **Obsidian compatibility**: wiki pages must be valid Markdown with YAML
+  frontmatter, `[[wikilinks]]`, and stable metadata suitable for Obsidian
+  graph view and Dataview.
+- **Financial-services taxonomy**: use categories deliberately:
+  concepts, instruments, markets, companies, macro, regulation, risk, models,
+  sources, strategies.
+- **Auditability**: preserve raw source lineage, dates, assumptions, risk notes,
+  and source URLs. Financial claims without provenance are lower confidence.
+- **Config-first wiki behavior**: `wiki.config.md` is the local contract for this
+  wiki. If page shape, category, filing behavior, or maintenance workflow is
+  unclear, read `wiki.config.md`, `sources.md`, and relevant `/prompts/*.md`
+  before changing structure.
+- **File reusable answers**: if a user-facing answer is reusable, route it to
+  `wiki-ingestor` so it lands in the relevant wiki page or `wiki/questions/`.
 - **Conditional fan-out**: parallelize read/research work only when it reduces
   latency or improves coverage. Never parallelize wiki writes.
 - **Single-writer rule**: `wiki-ingestor` is the only agent that writes wiki
@@ -169,6 +191,14 @@ Do NOT use fan-out for simple concepts, quick wiki lookup, greetings, or lint.
   `wiki-querier + financial-researcher lanes` -> `fanout-synthesizer` ->
   `wiki-ingestor`. This mirrors ADK's
   `SequentialAgent([pre-step, ParallelAgent([...]), summary])` pattern.
+- **Agentmemory-inspired support layer**: observation logs, audit logs, claim
+  verification, freshness reports, and lineage reports support the wiki. They
+  do NOT replace `/wiki/` as the durable financial knowledge layer.
+- **Observation vs fact**: use `observe_agent_event` for workflow/session
+  learnings. Use `wiki-ingestor` for durable financial facts.
+- **Verification gate**: for claims that could affect analysis quality, use
+  `verify_wiki_claim` or ask `wiki-querier` to verify lineage before treating
+  old wiki content as current.
 
 ## Direct Tools (Quick Checks)
 You also have direct access to wiki tools for fast routing decisions:
@@ -177,6 +207,10 @@ You also have direct access to wiki tools for fast routing decisions:
 - `search_wiki(query)` — lightweight local wiki search before opening pages
 - `read_source_manifest()` — see what raw sources were already ingested
 - `lint_wiki()` — deterministic wiki health check
+- `verify_wiki_claim(claim, page_path?)` — trace claim support to wiki pages and manifest sources
+- `freshness_report(category?)` — finance-specific stale-page report
+- `source_lineage(page_path?, source_path?)` — raw source -> manifest -> wiki page chain
+- `observe_agent_event(...)` — record routing/session observations without making them wiki facts
 - `internet_search(query)` — only for ultra-fast sanity checks (prefer researcher)
 
 ## Final Answer Format
@@ -184,6 +218,100 @@ You also have direct access to wiki tools for fast routing decisions:
 2. Wiki reference: "See wiki page: [[Topic]]"
 3. Related topics to explore
 """
+from pathlib import Path
+
+from deepagents.backends.protocol import BackendProtocol
+from mirage import MountMode, Workspace
+from mirage.agents.langchain import LangchainWorkspace
+from mirage.resource.disk import DiskResource
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+class FileOnlyMirageBackend(BackendProtocol):
+    """Mirage-backed filesystem backend without shell execution.
+
+    Mirage's LangchainWorkspace implements SandboxBackendProtocol, which adds
+    an execute tool. DeepAgents 0.5.x cannot combine execute-capable backends
+    with filesystem permissions. FinWiki needs permissions for read-only policy
+    memory, so this adapter deliberately exposes file operations only.
+    """
+
+    def __init__(self, workspace: LangchainWorkspace) -> None:
+        self._workspace = workspace
+
+    def ls_info(self, path: str):
+        return self._workspace.ls_info(path)
+
+    async def als_info(self, path: str):
+        return await self._workspace.als_info(path)
+
+    def read(self, file_path: str, offset: int = 0, limit: int = 2000):
+        return self._workspace.read(file_path, offset, limit)
+
+    async def aread(self, file_path: str, offset: int = 0, limit: int = 2000):
+        return await self._workspace.aread(file_path, offset, limit)
+
+    def write(self, file_path: str, content: str):
+        return self._workspace.write(file_path, content)
+
+    async def awrite(self, file_path: str, content: str):
+        return await self._workspace.awrite(file_path, content)
+
+    def edit(
+        self,
+        file_path: str,
+        old_string: str,
+        new_string: str,
+        replace_all: bool = False,
+    ):
+        return self._workspace.edit(file_path, old_string, new_string, replace_all)
+
+    async def aedit(
+        self,
+        file_path: str,
+        old_string: str,
+        new_string: str,
+        replace_all: bool = False,
+    ):
+        return await self._workspace.aedit(
+            file_path, old_string, new_string, replace_all
+        )
+
+    def grep_raw(
+        self,
+        pattern: str,
+        path: str | None = None,
+        glob: str | None = None,
+    ):
+        return self._workspace.grep_raw(pattern, path, glob)
+
+    async def agrep_raw(
+        self,
+        pattern: str,
+        path: str | None = None,
+        glob: str | None = None,
+    ):
+        return await self._workspace.agrep_raw(pattern, path, glob)
+
+    def glob_info(self, pattern: str, path: str = "/"):
+        return self._workspace.glob_info(pattern, path)
+
+    async def aglob_info(self, pattern: str, path: str = "/"):
+        return await self._workspace.aglob_info(pattern, path)
+
+    def upload_files(self, files: list[tuple[str, bytes]]):
+        return self._workspace.upload_files(files)
+
+    async def aupload_files(self, files: list[tuple[str, bytes]]):
+        return await self._workspace.aupload_files(files)
+
+    def download_files(self, paths: list[str]):
+        return self._workspace.download_files(paths)
+
+    async def adownload_files(self, paths: list[str]):
+        return await self._workspace.adownload_files(paths)
+
 
 # ── Agent (lazy) ──────────────────────────────────────────────────────────────
 @lru_cache(maxsize=1)
@@ -193,8 +321,13 @@ def get_agent():
     Cached so the same checkpointer and agent instance are reused across calls.
     """
     checkpointer = MemorySaver()
+    workspace = Workspace(
+        {"/": DiskResource(str(REPO_ROOT))},
+        mode=MountMode.WRITE,
+    )
+    backend = FileOnlyMirageBackend(LangchainWorkspace(workspace))
     return create_deep_agent(
-        model="google_genai:gemini-3.1-pro-preview",
+        model=finwiki_model(),
         tools=[
             internet_search,
             read_wiki_page,
@@ -207,6 +340,12 @@ def get_agent():
             read_source_manifest,
             search_wiki,
             lint_wiki,
+            verify_wiki_claim,
+            freshness_report,
+            source_lineage,
+            observe_agent_event,
+            append_audit,
+            redact_private_data,
         ],
         system_prompt=ORCHESTRATOR_PROMPT,
         subagents=[
@@ -218,7 +357,9 @@ def get_agent():
             fanout_synthesizer,
         ],
         skills=["/skills/"],
-        memory=["/AGENTS.md"],
+        memory=FINWIKI_MEMORY_FILES,
+        permissions=FINWIKI_MEMORY_PERMISSIONS,
+        backend=backend,
         checkpointer=checkpointer,
         debug=False,
         name="finwiki-orchestrator",

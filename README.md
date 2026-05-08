@@ -27,7 +27,21 @@ Sonuç: **Bir finansal wikipedia** oluşturur.
 │   └── host_agent/
 │       ├── agent.py              # CLI/default sync fan-out host agent
 │       └── async_agent.py        # Optional AsyncSubAgent supervisor graph
+├── docs/
+│   └── financial_services_llm_wiki_architecture.md
+├── app/
+│   ├── main.py                   # FastAPI HTTP runtime
+│   ├── schemas.py                # API request/response models
+│   └── service.py                # Agent invoke wrapper
+├── derived/                      # Generated artifacts before wiki promotion
 ├── langgraph.json                # Optional Agent Protocol graph registry
+├── logs/
+│   ├── audit-log.jsonl           # Machine-readable mutation/provenance events
+│   ├── agent-observations.jsonl  # Workflow/session observations, not wiki facts
+│   └── maintenance-log.md        # Manual maintenance/lint decisions
+├── memories/                     # Writable agent/default-user long-term memory
+├── policies/                     # Read-only financial services policies
+├── prompts/                      # Local workflow prompt templates
 ├── raw/                          # Immutable source layer
 │   ├── sources/                  # Articles, reports, filings, datasets
 │   └── assets/                   # Downloaded images and attachments
@@ -47,7 +61,13 @@ Sonuç: **Bir finansal wikipedia** oluşturur.
 │   ├── markets/                  # Piyasalar
 │   ├── companies/                # Şirket analizleri
 │   ├── macro/                    # Makroekonomi
+│   ├── regulation/               # Regulation, compliance, supervisors
+│   ├── risk/                     # Credit, market, liquidity, operational, model risk
+│   ├── models/                   # Valuation/risk/model methodology
+│   ├── sources/                  # Source profiles and lineage
 │   └── strategies/               # Yatırım stratejileri
+├── sources.md                    # Human-readable source registry
+├── wiki.config.md                # Local wiki purpose, flavor, page rules
 └── main.py                       # CLI giriş noktası
 ```
 
@@ -61,6 +81,40 @@ Gerekli ortam değişkenleri:
 - `TAVILY_API_KEY` — Web arama için
 - `GOOGLE_API_KEY` — Gemini modeli için (veya kullandığınız modelin API anahtarı)
 
+Kök dizinde `.env` kullanmak için:
+
+```bash
+cp .env.example .env
+# .env içine gerçek anahtarları yaz:
+# GOOGLE_API_KEY=...
+# TAVILY_API_KEY=...
+```
+
+`main.py` başlangıçta `.env` dosyasını otomatik yükler. `.env` git'e alınmaz.
+
+### Vertex AI OpenAI-Compatible Model
+
+Gemini Developer API kotası yerine Vertex AI OpenAI-compatible endpoint
+kullanmak için `.env` içinde şu modeli seç:
+
+```env
+FINWIKI_MODEL_PROVIDER=vertex_openai
+VERTEX_AI_ENDPOINT=aiplatform.googleapis.com
+VERTEX_AI_REGION=global
+VERTEX_AI_PROJECT_ID=project-c27de420-e9ff-4106-b66
+VERTEX_AI_MODEL=google/gemma-4-26b-a4b-it-maas
+VERTEX_AI_ENABLE_THINKING=true
+```
+
+Kimlik doğrulama için iki seçenek var:
+
+```env
+VERTEX_AI_ACCESS_TOKEN=<short-lived-access-token>
+```
+
+veya lokal geliştirmede `gcloud auth print-access-token` çalışır durumda
+olmalı. `VERTEX_AI_ACCESS_TOKEN` boşsa FinWiki token'ı `gcloud` ile alır.
+
 ## Kullanım
 
 ### Etkileşimli mod
@@ -73,24 +127,169 @@ uv run main.py
 uv run main.py "BIST 100 nedir"
 ```
 
+## HTTP API
+
+CLI dışında ince bir servis katmanı da vardır. Bu katman mevcut FinWiki
+orchestrator'ını HTTP üzerinden çağırır; yeni bir agent runtime yazmaz.
+
+Lokal geliştirme:
+
+```bash
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Healthcheck:
+
+```bash
+curl http://localhost:8000/health
+```
+
+Invoke:
+
+```bash
+curl -X POST http://localhost:8000/invoke \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "local-user",
+    "session_id": "demo-1",
+    "message": "DCF nedir?"
+  }'
+```
+
+`session_id` aynı kalırsa agent thread context'i korunur.
+
+## Docker Compose
+
+Servisi container içinde ayağa kaldırmak için:
+
+```bash
+docker compose up --build
+```
+
+Bu akış `compose.yaml` üzerinden:
+- `.env` dosyasını container'a verir
+- proje klasörünü `/app` olarak mount eder
+- `uvicorn` ile `app.main:app` servisini `8000` portunda çalıştırır
+
 ## LLM Wiki Katmanları
 
 FinWiki üç katmanı bilinçli olarak ayrı tutar:
 
 1. **Raw sources** — `/raw/` altında tutulan raporlar, makaleler, KAP notları, CSV/PDF metinleri ve görseller. Bunlar kaynak gerçekliği kabul edilir ve ajan tarafından değiştirilmez.
 2. **Wiki** — `/wiki/` altında LLM tarafından yazılan, güncellenen ve birbirine bağlanan Markdown bilgi tabanı.
-3. **Schema** — `AGENTS.md`, agent promptları ve skill dosyaları. Ajanların wiki'yi nasıl yöneteceğini belirler.
+3. **Memory** — `/memories/` ve `/policies/` altında davranış, tercih ve compliance hafızası. Finansal gerçekler burada tutulmaz.
+4. **Local config** — `wiki.config.md`, `sources.md`, `prompts/`, `logs/maintenance-log.md`. Bu wiki'nin flavor ve workflow sözleşmesi.
+5. **Schema** — `AGENTS.md`, agent promptları ve skill dosyaları. Ajanların wiki'yi nasıl yöneteceğini belirler.
 
 Karpathy'nin LLM Wiki fikrindeki ana ayrım burada korunur: bilgi her sorguda ham kaynaklardan yeniden türetilmez; wiki'ye derlenir ve zamanla birleşerek güçlenir.
+
+## Wiki Builder Mentality
+
+FinWiki, Wiki Builder yaklaşımını finansal servisler için uygular:
+
+- **Config-first**: agent önce `wiki.config.md` sözleşmesini okur.
+- **Local prompts**: compile/query/lint workflow niyeti `/prompts/` altında düzenlenebilir.
+- **Source registry**: `sources.md` insan-okunur kaynak defteridir; `wiki/.manifest.json` machine-readable manifesttir.
+- **File useful answers**: tekrar kullanılabilir cevaplar `wiki/questions/` veya ilgili kategori sayfasına eklenir.
+- **Maintenance loop**: yapısal kararlar ve lint özetleri `logs/maintenance-log.md` içinde tutulur.
+- **Audit + observation logs**: tool mutasyonları `logs/audit-log.jsonl` içine, workflow/session observations `logs/agent-observations.jsonl` içine yazılır.
+- **Derived before canonical**: tablolar, briefler ve exportlar önce `derived/` altında üretilir; kalıcı bilgi sonra `wiki/`ye terfi eder.
+
+Bu zihniyetin amacı setup maliyetini düşürmek ve her yeni araştırma/wiki çalışmasını aynı güvenilir döngüye sokmaktır:
+
+```text
+raw source
+  -> local config
+  -> compile prompts
+  -> wiki pages
+  -> filed answers
+  -> lint and maintenance
+```
+
+## DeepAgents Memory Layer
+
+FinWiki DeepAgents long-term memory kullanır, ama memory ile wiki farklı görevler üstlenir:
+
+```text
+/wiki/       financial knowledge base
+/raw/        immutable evidence
+/memories/   agent and user behavior memory
+/policies/   read-only compliance and source-quality policy
+/skills/     procedural memory
+```
+
+Runtime'a bağlı memory dosyaları:
+
+- `/AGENTS.md`
+- `/wiki.config.md`
+- `/sources.md`
+- `/memories/agent.md`
+- `/memories/user_preferences.md`
+- `/policies/compliance.md`
+- `/policies/source_quality.md`
+
+`/policies/**` write-deny permission ile korunur. Bu sayede compliance ve kaynak kalite kuralları prompt injection veya kullanıcı tercihiyle değiştirilemez. Deployment ortamında `/memories/user_preferences.md` user-scoped StoreBackend'e taşınmalıdır.
+
+## Agentmemory-Inspired Support Layer
+
+`agentmemory` projesinden FinWiki’ye alınan desenler, wiki’nin yerine geçmez;
+wiki’nin güvenilirliğini artıran destek katmanlarıdır:
+
+- **Observation journal**: `observe_agent_event(...)` ajan kararlarını, workflow
+  sinyallerini ve session lessons kayıt eder. Finansal gerçekler burada tutulmaz.
+- **Audit log**: `upsert_wiki_page`, `write_wiki_page`, `update_index`,
+  `append_log`, `register_source` gibi mutasyonlar `logs/audit-log.jsonl`
+  içine structured event olarak yazılır.
+- **Claim verification**: `verify_wiki_claim(...)` bir iddianın hangi wiki
+  sayfaları, kaynaklar ve manifest kayıtlarıyla desteklendiğini raporlar.
+- **Freshness scoring**: `freshness_report(...)` şirket, piyasa, makro,
+  regülasyon ve strateji sayfalarında veri yaşını kategoriye göre kontrol eder.
+- **Source lineage**: `source_lineage(...)` raw/external source → manifest →
+  wiki page zincirini gösterir.
+- **Privacy redaction**: support log ve source notes yazılmadan önce secret/API
+  key/private block temizliği yapılır.
+
+Bu katmanların amacı FinWiki’nin self-healing davranışına yaklaşması,
+çelişki/staleness/source-gap durumlarını daha erken görmesi ve Obsidian-first
+markdown yapısını bozmadan daha güçlü bir retrieval/governance yüzeyi kazanmasıdır.
+
+## Financial Services + Obsidian Design
+
+FinWiki, finansal servisler için Obsidian-compatible bir LLM Wiki olarak çalışır:
+
+- **Obsidian vault**: `/wiki/` doğrudan Obsidian ile açılabilir; `[[wikilink]]`, YAML frontmatter ve graph view kullanılır.
+- **Audit trail**: `/raw/`, `/wiki/.manifest.json`, `/wiki/log.md` ve sayfa `sources` alanı kaynak soyu sağlar.
+- **Domain taxonomy**: finansal kavram, şirket, piyasa, makro, regülasyon, risk, model, kaynak ve strateji ayrı kategorilerdir.
+- **Graph-ready memory**: wiki sayfaları ileride GraphRAG, LightRAG, HippoRAG veya qmd gibi arama/graph katmanlarına girdi olacak şekilde entity-link yoğun tutulur.
+- **Compliance posture**: kullanıcı cevapları yatırım tavsiyesi değil, kaynaklı analiz ve risk çerçevesidir.
+
+Obsidian metadata standardı:
+
+```yaml
+---
+title: <Topic>
+tags: [finance, <category>]
+domain: financial-services
+last_updated: YYYY-MM-DD
+review_status: draft
+aliases: []
+sources:
+  - "https://..."
+related:
+  - "related_topic"
+---
+```
 
 ## Agent İş Akışı (Her Sorgu)
 
 1. **Bul** — `search_wiki(...)`, `list_wiki_pages()` veya `read_wiki_page('index.md')` ile konu var mı bak.
-2. **Araştır** — `internet_search(...)` ile güncel veri topla.
-3. **Derle** — Çelişkileri, tarihleri, kaynakları ve kavram bağlantılarını sentezle.
-4. **Yaz/Güncelle** — `upsert_wiki_page(...)` ile Markdown sayfası, index ve log'u birlikte güncelle.
-5. **Manifest'e işle** — `register_source(...)` ile kaynak ve etkilenen sayfaları kaydet.
-6. **Cevapla** — Kullanıcıya wiki sayfasını referans vererek cevap ver.
+2. **Doğrula** — yüksek etkili veya zaman hassas claim’lerde `verify_wiki_claim(...)`, `freshness_report(...)` ve `source_lineage(...)` kullan.
+3. **Araştır** — `internet_search(...)` ile güncel veri topla.
+4. **Derle** — Çelişkileri, tarihleri, kaynakları ve kavram bağlantılarını sentezle.
+5. **Yaz/Güncelle** — `upsert_wiki_page(...)` ile Markdown sayfası, index, log ve audit kaydını birlikte güncelle.
+6. **Manifest'e işle** — `register_source(...)` ile kaynak ve etkilenen sayfaları kaydet.
+7. **Gözlemle** — reusable workflow learning varsa `observe_agent_event(...)` ile observation journal’a yaz.
+8. **Cevapla** — Kullanıcıya wiki sayfasını referans vererek cevap ver.
 
 ## Koşullu Fan-Out Modu
 
@@ -180,6 +379,19 @@ Local development için LangGraph/Agent Protocol server gerekir. Worker sayısı
 - `read_source_manifest()` — ingest geçmişini JSON olarak okur.
 - `lint_wiki()` — orphan page, ölü wikilink, stale page ve index drift kontrolü.
 - `write_wiki_page`, `update_index`, `append_log` — düşük seviye manuel araçlar.
+
+## Research Scan: Frameworks & Papers
+
+Bu altyapı şu güncel yaklaşımlardan beslendi:
+
+- **DeepAgents / LangGraph** — uzun görevler, subagent orchestration, async fan-out ve durable execution için harness/runtime katmanı.
+- **Obsidian Wiki / LLM Wiki pattern** — raw sources yerine compiled, interlinked Markdown wiki fikri.
+- **qmd** — lokal Markdown için BM25 + vector + MCP tabanlı arama katmanı; FinWiki'de ileride `search_wiki` yerine veya yanında kullanılabilir.
+- **Microsoft GraphRAG** — metinden LLM-derived knowledge graph, community summary ve global/local query ayrımı.
+- **LightRAG** — graph + vector dual-level retrieval ve incremental updates; FinWiki'nin "wiki önce, graph sonra" yaklaşımıyla uyumlu.
+- **HippoRAG** — uzun dönem bellek için KG + Personalized PageRank; çok-hop finansal soru cevap için ilham.
+- **FinRobot / FinGPT Search Agents** — finansal ajanların task decomposition, model/data ops ve domain-specialized workflow ihtiyacını vurgular.
+- **FinReflectKG** — finansal dokümanlardan KG üretiminde table-aware chunking, schema-guided extraction ve reflection loop yaklaşımı.
 
 ## Ingest Örneği
 

@@ -13,7 +13,12 @@ from tools.serverless.wiki_manager import (
     upsert_wiki_page,
     register_source,
     search_wiki,
+    verify_wiki_claim,
+    source_lineage,
+    observe_agent_event,
+    redact_private_data,
 )
+from agents.model_config import finwiki_model
 
 INGEST_SYSTEM_PROMPT = """\
 You are the Wiki Ingestor — a precise, structured markdown writer.
@@ -27,15 +32,26 @@ Your sole job is to convert research findings into durable wiki pages.
    the input includes a URL, local file, report, article, or dataset.
 4. Use `write_wiki_page`, `update_index`, and `append_log` only when you need
    manual control that `upsert_wiki_page` cannot provide.
+5. If incoming material includes secrets, private notes, credentials, or
+   customer-identifying content, call `redact_private_data` before writing
+   notes/log-style content.
+6. If the ingest updates or contradicts an existing claim, call
+   `verify_wiki_claim` first and preserve old/new dated claims.
+7. Use `observe_agent_event` for ingestion decisions or workflow lessons that
+   should be remembered but are not durable financial facts.
 
-Valid categories: concepts, instruments, markets, companies, macro, strategies.
+Valid categories: concepts, instruments, markets, companies, macro, regulation,
+risk, models, sources, strategies.
 
 ## Wiki Page Template
 ```yaml
 ---
 title: <Topic Name>
 tags: [finance, <category>]
+domain: financial-services
 last_updated: <YYYY-MM-DD>
+review_status: draft
+aliases: []
 sources:
   - "https://..."
 related:
@@ -69,6 +85,10 @@ Link slugs should match the filename without `.md` extension.
 - Preserve dated contradictions with sources instead of erasing older claims.
 - Index entries need a one-line summary so future queries can decide whether
   to open the page.
+- Use Obsidian-compatible wikilinks and YAML frontmatter. Pages should render
+  cleanly as an Obsidian vault.
+- For financial services, separate facts about regulation, risk, models, and
+  data/source lineage into their own category when they are reusable.
 
 ## Language
 Wiki pages are written in **English**. The orchestrator will translate
@@ -98,6 +118,10 @@ wiki_ingestor = {
         upsert_wiki_page,
         register_source,
         search_wiki,
+        verify_wiki_claim,
+        source_lineage,
+        observe_agent_event,
+        redact_private_data,
     ],
-    "model": "google_genai:gemini-3.1-pro-preview",
+    "model": finwiki_model(),
 }

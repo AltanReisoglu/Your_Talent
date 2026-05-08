@@ -1,0 +1,1 @@
+{"event_type": "smoke_test", "id": "obs_e2daa3a655de492c", "importance": 3, "payload": {"status": "ok"}, "related_pages": [], "sources": [], "summary": "Agentmemory support layer smoke test", "timestamp": "2026-05-07T23:18:52"}

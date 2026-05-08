@@ -8,6 +8,8 @@ The orchestrator delegates independent read/research tasks first, then sends
 their compact outputs here for fan-in synthesis. This agent never writes files.
 """
 
+from agents.model_config import finwiki_model
+
 FANOUT_SYNTHESIS_PROMPT = """\
 You are the FinWiki Fan-Out Synthesizer.
 Your job is to gather outputs from multiple independent subagents and produce
@@ -35,6 +37,7 @@ Return ONLY markdown with these sections:
 
 ### Wiki Update Plan
 - Target category: concepts | instruments | markets | companies | macro | strategies
+- Target category: concepts | instruments | markets | companies | macro | regulation | risk | models | sources | strategies
 - Target page: <suggested/path.md>
 - Operation: create | update
 - Related wikilinks: [[A]] | [[B]] | [[C]]
@@ -62,5 +65,5 @@ fanout_synthesizer = {
     "system_prompt": FANOUT_SYNTHESIS_PROMPT + "\n\nIMPORTANT: Return ONLY the fan-in synthesis. "
         "Do NOT call tools. Keep your response under 700 words.",
     "tools": [],
-    "model": "google_genai:gemini-3.1-pro-preview",
+    "model": finwiki_model(),
 }

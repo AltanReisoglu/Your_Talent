@@ -10,7 +10,11 @@ from tools.serverless.wiki_manager import (
     read_wiki_page,
     list_wiki_pages,
     search_wiki,
+    verify_wiki_claim,
+    freshness_report,
+    source_lineage,
 )
+from agents.model_config import finwiki_model
 
 QUERY_SYSTEM_PROMPT = """\
 You are the Wiki Query Engine — a fast, accurate retrieval agent.
@@ -21,6 +25,10 @@ Your sole job is to find relevant wiki pages and synthesize a concise answer.
    what the wiki already knows about the user's topic.
 2. Read the most relevant pages with `read_wiki_page(relative_path)`.
 3. Synthesize a direct answer. Cite wiki pages by title.
+4. If the answer depends on a specific claim or stale-looking page, call
+   `verify_wiki_claim(claim, page_path?)` and report the verification status.
+5. For market/company/macro/regulation pages, use `freshness_report(category)`
+   when freshness is material to the answer.
 
 ## Output Rules
 - Answer in the **user's language** (the orchestrator forwards the original query).
@@ -29,6 +37,8 @@ Your sole job is to find relevant wiki pages and synthesize a concise answer.
 - Keep it concise. The orchestrator may ask follow-up questions.
 - When the question produces a reusable synthesis that is not yet in the wiki,
   flag it as "recommend persist" so the orchestrator can invoke wiki-ingestor.
+- Distinguish "wiki says" from "verified current fact". If lineage or
+  freshness is weak, say that explicitly.
 
 ## Knowledge Gaps
 If you notice missing topics or stale data while reading, flag them briefly:
@@ -52,6 +62,9 @@ wiki_querier = {
         read_wiki_page,
         list_wiki_pages,
         search_wiki,
+        verify_wiki_claim,
+        freshness_report,
+        source_lineage,
     ],
-    "model": "google_genai:gemini-3.1-pro-preview",
+    "model": finwiki_model(),
 }

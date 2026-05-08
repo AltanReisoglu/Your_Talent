@@ -6,6 +6,9 @@ Use this skill when the user asks about:
 - Market instruments (stocks, bonds, ETFs, options, futures, crypto)
 - Company analysis (fundamental, technical, valuation)
 - Macroeconomic topics (inflation, interest rates, GDP, currency)
+- Financial-services regulation, compliance, disclosures, and supervisory guidance
+- Risk management topics (credit, market, liquidity, operational, model risk)
+- Financial models and data/source lineage
 - Investment strategies (value investing, momentum, factor investing)
 - Turkish markets (BIST, TCMB, SPK regulations)
 
@@ -25,6 +28,8 @@ Use this skill when the user asks about:
 - Contradictions → explicitly flag with ⚠️
 - Raw sources → immutable; never rewrite `/raw/` during ingest
 - Reusable answers → persist them as wiki pages when they add durable knowledge
+- Obsidian compatibility → YAML frontmatter + `[[wikilinks]]` + stable aliases
+- Financial services auditability → source date, source type, assumptions, and risk caveats
 
 ## Turkish Market Specifics
 - BIST: Borsa İstanbul (XU100, XU030 indices)
