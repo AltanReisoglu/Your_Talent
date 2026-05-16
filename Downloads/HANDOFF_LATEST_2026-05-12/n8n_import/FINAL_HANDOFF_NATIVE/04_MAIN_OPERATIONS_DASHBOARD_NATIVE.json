@@ -1,0 +1,566 @@
+{
+  "name": "Main Operations Dashboard Read Model",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "Dashboard/read-model workflow.\nTrigger: Webhook called by 00 Telegram Router or browser/API.\nReads structured Postgres records only.\nNeeds Action Today is the primary queue.",
+        "width": 520,
+        "height": 320,
+        "color": 5
+      },
+      "id": "e5d0414e-a6a8-4d59-b90f-ab69eff19d37",
+      "name": "Read Me",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -520,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "main-operations-dashboard",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "b6755178-caa2-4f1e-87c8-2a649cae13d4",
+      "name": "Workflow Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "4dd68a38-3527-412b-a171-61117ef3d0e6"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "40fb1675-5acc-4d20-9edd-672aab10cc09",
+              "name": "command_text",
+              "value": "={{ $json.body?.command_text || $json.command_text || $json.message?.text || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "f30dcbbf-f31f-46d3-872b-6e2a256f50cd",
+              "name": "telegram_chat_id",
+              "value": "={{ $json.body?.chat_id || $json.message?.chat?.id || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "e0f63403-06e9-4822-aada-ad32d010c412",
+              "name": "telegram_user_id",
+              "value": "={{ $json.body?.user_id || $json.message?.from?.id || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "255c9b3e-3324-4552-aa73-1e5ae5db8c48",
+              "name": "command_root",
+              "value": "={{ String($json.body?.command_text || $json.command_text || $json.message?.text || '').trim().split(/\\s+/)[0] || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "fdc0ec8a-d64b-4646-b217-1f0e358dd338",
+              "name": "command_subcommand",
+              "value": "={{ String($json.body?.command_text || $json.command_text || $json.message?.text || '').trim().split(/\\s+/)[1] || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "ae13cbe3-c0ad-4b48-9064-ed6a304d4cf4",
+              "name": "arg_1",
+              "value": "={{ String($json.body?.command_text || $json.command_text || $json.message?.text || '').trim().split(/\\s+/)[2] || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "fb322647-2549-4682-b947-493e802d56f5",
+              "name": "arg_2",
+              "value": "={{ String($json.body?.command_text || $json.command_text || $json.message?.text || '').trim().split(/\\s+/)[3] || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "0f767348-ed10-4166-ae88-726ccce9d30b",
+              "name": "arg_tail",
+              "value": "={{ String($json.body?.command_text || $json.command_text || $json.message?.text || '').trim().split(/\\s+/).slice(3).join(' ') }}",
+              "type": "string"
+            },
+            {
+              "id": "60f6106a-1929-4bad-add2-a3d096f93777",
+              "name": "command_action",
+              "value": "={{ (() => {\nconst p = String($json.body?.command_text || $json.command_text || $json.message?.text || '').trim().split(/\\s+/);\nconst root = p[0] || '';\nconst sub = p[1] || '';\nif (root === '/sales' && sub === 'find') return 'sales_find';\nif (root === '/sales' && sub === 'review') return 'sales_review';\nif (root === '/sales' && sub === 'approve') return 'sales_approve';\nif (root === '/sales' && sub === 'send') return 'sales_send';\nif (root === '/sales' && sub === 'followup') return 'sales_followup';\nif (root === '/client' && sub === 'start') return 'client_start';\nif (root === '/content' && sub === 'create') return 'content_create';\nif (root === '/content' && sub === 'status') return 'content_status';\nif (root === '/content' && sub === 'select') return 'content_select';\nif (root === '/status') return 'content_status';\nif (root === '/review' && sub === 'submit') return 'review_submit';\nif (root === '/review' && sub === 'queue') return 'review_queue';\nif (root === '/review' && sub === 'approve') return 'review_approve';\nif (root === '/review' && sub === 'reject') return 'review_reject';\nif (root === '/review' && sub === 'revise') return 'review_revise';\nif (root === '/deliver') return 'deliver';\nif (root === '/invoice' && sub === 'send') return 'invoice_send';\nif (root === '/summary' && sub === 'today') return 'summary_today';\nif (root === '/dashboard') return 'dashboard';\nreturn 'unknown';\n})() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b8181627-60fb-488b-939d-d655decddf2b",
+      "name": "Normalize Command",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        300,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "4e02a275-0fe6-4536-bfb9-a8f442bf7e90",
+                    "leftValue": "={{ $json.command_action }}",
+                    "rightValue": "summary_today",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "45c07c1c-ef0a-4b88-ac07-4001d39ed99a",
+                    "leftValue": "={{ $json.command_action }}",
+                    "rightValue": "dashboard",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b5ac254b-09ac-4b7f-b04e-3c12ddab63a8",
+      "name": "Switch by Command Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        620,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select 'today_overview' as section, json_build_object('new_leads_today', (select count(*) from lead where created_at::date = current_date), 'outreach_sent_today', (select count(*) from lead where last_contact_at::date = current_date), 'new_clients_today', (select count(*) from client where created_at::date = current_date), 'projects_in_production', (select count(*) from project where business_stage = 'In Production'), 'waiting_approval', (select count(*) from approval_item where approval_status = 'waiting_review'), 'deliveries_today', (select count(*) from delivery_record where delivered_at::date = current_date), 'invoices_waiting', (select count(*) from invoice_record where payment_waiting = true)) as data;",
+        "options": {}
+      },
+      "id": "5b2caae2-085f-4447-81c7-20224cfabfb0",
+      "name": "summary_today - Query Today Overview",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        960,
+        -300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select * from project where waiting_on ilike '%internal%' or waiting_on ilike '%founder%' or waiting_on ilike '%delivery%' or waiting_on ilike '%invoice%' order by due_date nulls last, updated_at desc limit 25;",
+        "options": {}
+      },
+      "id": "1228ac65-3315-4a1e-aa08-38bfd6fc3119",
+      "name": "summary_today - Query Needs Action Today",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1240,
+        -300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "24dc8076-0993-4a2f-9514-51c4d51a394b",
+              "name": "ok",
+              "value": "={{ true }}",
+              "type": "string"
+            },
+            {
+              "id": "6566dec3-319e-4721-b788-b2686a5fcfbe",
+              "name": "action",
+              "value": "summary_today",
+              "type": "string"
+            },
+            {
+              "id": "a2f47546-c820-4f8c-ad5b-d1dcc69c2fac",
+              "name": "telegram_text",
+              "value": "={{ \"Today overview and Needs Action Today returned.\" }}",
+              "type": "string"
+            },
+            {
+              "id": "2c1f42e8-bf3c-4f1b-9722-5e7ceb713ae5",
+              "name": "data",
+              "value": "={{ $json }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7ec875bb-2568-48ae-b905-d2faad611ab8",
+      "name": "summary_today - Format Today Summary",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1520,
+        -300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "37758344-6472-44ce-91c8-6d7797f4316a",
+      "name": "summary_today - Respond JSON",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1800,
+        -300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select 'today_overview' as section, count(*) from project;",
+        "options": {}
+      },
+      "id": "6c1c7ad9-b01f-471a-8b01-985f8072325d",
+      "name": "dashboard - Today Overview",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select * from project where waiting_on is not null order by due_date nulls last, updated_at desc limit 25;",
+        "options": {}
+      },
+      "id": "137d8eff-c57d-4c09-9dc2-26f6beff6d27",
+      "name": "dashboard - Needs Action Today",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select * from lead order by updated_at desc limit 100;",
+        "options": {}
+      },
+      "id": "d906608c-2f20-4129-84bb-338f90a70c8f",
+      "name": "dashboard - Sales Pipeline",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select c.client_name, p.* from client c join project p on p.client_id = c.client_id order by p.updated_at desc;",
+        "options": {}
+      },
+      "id": "c0b02f03-2f5c-4006-a6b1-9d56fca9070a",
+      "name": "dashboard - Active Clients Pipeline",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1800,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select p.*, a.approval_status from project p left join approval_item a on a.project_id = p.project_id order by p.updated_at desc;",
+        "options": {}
+      },
+      "id": "9d8f2aa5-81a8-4231-84ba-acd6fc6332ff",
+      "name": "dashboard - Production Board",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2080,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select d.*, i.invoice_status, i.invoice_amount, i.payment_waiting from delivery_record d left join invoice_record i on i.project_id = d.project_id order by d.delivered_at desc;",
+        "options": {}
+      },
+      "id": "eab9e871-13c5-4677-8a70-17632a091721",
+      "name": "dashboard - Delivery Invoice Board",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2360,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c516f367-1a56-4c7a-a82b-994fb395e805",
+              "name": "ok",
+              "value": "={{ true }}",
+              "type": "string"
+            },
+            {
+              "id": "55b2648e-3e05-4147-b0ba-7c769e8935ad",
+              "name": "action",
+              "value": "dashboard",
+              "type": "string"
+            },
+            {
+              "id": "ac35409b-a695-4277-9f2f-17377ae8ee07",
+              "name": "telegram_text",
+              "value": "={{ \"Dashboard read model returned from database queries.\" }}",
+              "type": "string"
+            },
+            {
+              "id": "c2772134-fffa-443a-bbfc-ce4305d3ea1d",
+              "name": "data",
+              "value": "={{ $json }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e97fb84b-61ed-420d-b29c-cc168b4d55a4",
+      "name": "dashboard - Format Dashboard JSON",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2640,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "ff1f131d-3018-453d-ae1b-18a77b0be21e",
+      "name": "dashboard - Respond JSON",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2920,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Workflow Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Command": {
+      "main": [
+        [
+          {
+            "node": "Switch by Command Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch by Command Action": {
+      "main": [
+        [
+          {
+            "node": "summary_today - Query Today Overview",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "dashboard - Today Overview",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "summary_today - Query Today Overview": {
+      "main": [
+        [
+          {
+            "node": "summary_today - Query Needs Action Today",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "summary_today - Query Needs Action Today": {
+      "main": [
+        [
+          {
+            "node": "summary_today - Format Today Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "summary_today - Format Today Summary": {
+      "main": [
+        [
+          {
+            "node": "summary_today - Respond JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "dashboard - Today Overview": {
+      "main": [
+        [
+          {
+            "node": "dashboard - Needs Action Today",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "dashboard - Needs Action Today": {
+      "main": [
+        [
+          {
+            "node": "dashboard - Sales Pipeline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "dashboard - Sales Pipeline": {
+      "main": [
+        [
+          {
+            "node": "dashboard - Active Clients Pipeline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "dashboard - Active Clients Pipeline": {
+      "main": [
+        [
+          {
+            "node": "dashboard - Production Board",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "dashboard - Production Board": {
+      "main": [
+        [
+          {
+            "node": "dashboard - Delivery Invoice Board",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "dashboard - Delivery Invoice Board": {
+      "main": [
+        [
+          {
+            "node": "dashboard - Format Dashboard JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "dashboard - Format Dashboard JSON": {
+      "main": [
+        [
+          {
+            "node": "dashboard - Respond JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "aa2140ad-6b49-4a5e-9d95-93d23cfdcb76",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "db7c6491-078c-4dd1-aaef-1bf82c7f45b1",
+  "tags": []
+}

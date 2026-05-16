@@ -1,0 +1,495 @@
+{
+  "name": "00 - Telegram Command Router",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "This is the only workflow that owns Telegram Trigger.\nReason: Telegram Bot API supports one webhook per bot, so one router is safer than three Telegram Trigger workflows.\n\nSet these env vars to the production webhook URLs of the child workflows:\n- WF01_SALES_WEBHOOK_URL\n- WF02_PRODUCTION_WEBHOOK_URL\n- WF03_APPROVAL_WEBHOOK_URL\n- DASHBOARD_WEBHOOK_URL\n\nThen connect Telegram credential on Telegram Trigger and Send Message nodes.",
+        "width": 560,
+        "height": 420,
+        "color": 5
+      },
+      "id": "d7d183af-fd93-461a-a634-2e87794a8148",
+      "name": "Read Me - Telegram Router",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -520,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "bab63c29-cf20-4619-906d-f2d28419e560",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "026f0054-a242-4922-991c-ae9539244cb4",
+              "name": "command_text",
+              "value": "={{ $json.message?.text || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "19e2c25d-511c-431a-8e2f-035c272f47f8",
+              "name": "telegram_chat_id",
+              "value": "={{ $json.message?.chat?.id || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "2f21f643-82b3-4639-a262-fae5cfcd7886",
+              "name": "telegram_user_id",
+              "value": "={{ $json.message?.from?.id || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "6e552f87-5862-4687-a5e4-651f5bb6e88d",
+              "name": "command_root",
+              "value": "={{ String($json.message?.text || \"\").trim().split(/\\s+/)[0] || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "7ee5cc37-f3f6-4d9a-826c-402f6f61299d",
+              "name": "command_subcommand",
+              "value": "={{ String($json.message?.text || \"\").trim().split(/\\s+/)[1] || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "3ccb8611-4f6a-4165-aa36-eae87ee764b0",
+              "name": "workflow_target",
+              "value": "={{ (() => {\nconst p = String($json.message?.text || '').trim().split(/\\s+/);\nconst root = p[0] || '';\nif (root === '/sales' || root === '/client') return 'wf01_sales';\nif (root === '/content' || root === '/status') return 'wf02_production';\nif (root === '/review' || root === '/deliver' || root === '/invoice') return 'wf03_approval_delivery_invoice';\nif (root === '/summary' || root === '/dashboard') return 'dashboard';\nreturn 'unknown';\n})() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ac8cf1eb-1f1a-4dc7-b345-fd9a7816d83d",
+      "name": "Normalize Telegram Command",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        300,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "fc10a11e-9960-4769-96ff-b80e5b285d0b",
+                    "leftValue": "={{ $json.workflow_target }}",
+                    "rightValue": "wf01_sales",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "ff285db3-7ba6-4c3e-b117-bd402c64326d",
+                    "leftValue": "={{ $json.workflow_target }}",
+                    "rightValue": "wf02_production",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "d08624d5-6487-451e-8306-4f73a98ed778",
+                    "leftValue": "={{ $json.workflow_target }}",
+                    "rightValue": "wf03_approval_delivery_invoice",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "9ae745e0-fe5c-4dc2-a185-4086e3e37124",
+                    "leftValue": "={{ $json.workflow_target }}",
+                    "rightValue": "dashboard",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9e7bfcae-2617-4651-8a23-46706ee98fa3",
+      "name": "Switch by Target Workflow",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        620,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.WF01_SALES_WEBHOOK_URL }}",
+        "authentication": "none",
+        "sendHeaders": false,
+        "headerParameters": {
+          "parameters": []
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { command_text: $(\"Normalize Telegram Command\").item.json.command_text, chat_id: $(\"Normalize Telegram Command\").item.json.telegram_chat_id, user_id: $(\"Normalize Telegram Command\").item.json.telegram_user_id } }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "3fc78c3d-8b47-4f95-9c12-892a56b7d963",
+      "name": "Call WF01 Sales Webhook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        -420
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $(\"Normalize Telegram Command\").item.json.telegram_chat_id }}",
+        "text": "={{ $json.telegram_text || JSON.stringify($json) }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "64ce00a7-4d17-4ea5-a7da-a5714279eff2",
+      "name": "wf01_sales - Telegram Send Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1240,
+        -420
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.WF02_PRODUCTION_WEBHOOK_URL }}",
+        "authentication": "none",
+        "sendHeaders": false,
+        "headerParameters": {
+          "parameters": []
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { command_text: $(\"Normalize Telegram Command\").item.json.command_text, chat_id: $(\"Normalize Telegram Command\").item.json.telegram_chat_id, user_id: $(\"Normalize Telegram Command\").item.json.telegram_user_id } }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "3785816c-3857-4453-88aa-03527eb5ec9b",
+      "name": "Call WF02 Production Webhook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $(\"Normalize Telegram Command\").item.json.telegram_chat_id }}",
+        "text": "={{ $json.telegram_text || JSON.stringify($json) }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "47d789ca-96bd-474e-9e7e-2c561e1390cf",
+      "name": "wf02_production - Telegram Send Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1240,
+        -140
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.WF03_APPROVAL_WEBHOOK_URL }}",
+        "authentication": "none",
+        "sendHeaders": false,
+        "headerParameters": {
+          "parameters": []
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { command_text: $(\"Normalize Telegram Command\").item.json.command_text, chat_id: $(\"Normalize Telegram Command\").item.json.telegram_chat_id, user_id: $(\"Normalize Telegram Command\").item.json.telegram_user_id } }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "f3f8c18a-01ad-4e64-b6ad-92e4ea945fe9",
+      "name": "Call WF03 Approval Delivery Webhook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $(\"Normalize Telegram Command\").item.json.telegram_chat_id }}",
+        "text": "={{ $json.telegram_text || JSON.stringify($json) }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "3f9f3d15-9649-459b-9f33-4e9d744635b3",
+      "name": "wf03_approval_delivery_invoice - Telegram Send Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1240,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DASHBOARD_WEBHOOK_URL }}",
+        "authentication": "none",
+        "sendHeaders": false,
+        "headerParameters": {
+          "parameters": []
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { command_text: $(\"Normalize Telegram Command\").item.json.command_text, chat_id: $(\"Normalize Telegram Command\").item.json.telegram_chat_id, user_id: $(\"Normalize Telegram Command\").item.json.telegram_user_id } }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "6142497c-d0f8-45ec-a950-75f5d3ee2a45",
+      "name": "Call Dashboard Webhook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendMessage",
+        "chatId": "={{ $(\"Normalize Telegram Command\").item.json.telegram_chat_id }}",
+        "text": "={{ $json.telegram_text || JSON.stringify($json) }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "6940f2ea-2b2d-4f00-a00d-4205bb270b99",
+      "name": "dashboard - Telegram Send Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1240,
+        420
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Telegram Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Telegram Command": {
+      "main": [
+        [
+          {
+            "node": "Switch by Target Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch by Target Workflow": {
+      "main": [
+        [
+          {
+            "node": "Call WF01 Sales Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call WF02 Production Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call WF03 Approval Delivery Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call Dashboard Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call WF01 Sales Webhook": {
+      "main": [
+        [
+          {
+            "node": "wf01_sales - Telegram Send Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call WF02 Production Webhook": {
+      "main": [
+        [
+          {
+            "node": "wf02_production - Telegram Send Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call WF03 Approval Delivery Webhook": {
+      "main": [
+        [
+          {
+            "node": "wf03_approval_delivery_invoice - Telegram Send Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Dashboard Webhook": {
+      "main": [
+        [
+          {
+            "node": "dashboard - Telegram Send Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "81fe3f4b-c34f-4a3b-a482-bb5dbdf426d5",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "3932dd95-116a-4516-a188-a9348d76d919",
+  "tags": []
+}

@@ -1,0 +1,1459 @@
+{
+  "name": "WF_01_Lead_Scrape_Cold_Outreach_Client_Conversion",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "Workflow 1: Lead scrape, cold outreach, client conversion.\nTrigger: Webhook called by 00 Telegram Router.\nUses: Postgres, Apify HTTP, OpenAI HTTP, Gmail, Google Drive.\nReturns JSON with telegram_text to router.",
+        "width": 520,
+        "height": 320,
+        "color": 5
+      },
+      "id": "34e2f5c3-a88e-445f-a239-287e1817eab2",
+      "name": "Read Me",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -520,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "wf01-sales",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "7fb902d2-235d-4583-8cea-3d079f096bec",
+      "name": "Workflow Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "bfba6067-d843-4514-928c-a4c94859b7ba"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "40fb1675-5acc-4d20-9edd-672aab10cc09",
+              "name": "command_text",
+              "value": "={{ $json.body?.command_text || $json.command_text || $json.message?.text || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "f30dcbbf-f31f-46d3-872b-6e2a256f50cd",
+              "name": "telegram_chat_id",
+              "value": "={{ $json.body?.chat_id || $json.message?.chat?.id || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "e0f63403-06e9-4822-aada-ad32d010c412",
+              "name": "telegram_user_id",
+              "value": "={{ $json.body?.user_id || $json.message?.from?.id || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "255c9b3e-3324-4552-aa73-1e5ae5db8c48",
+              "name": "command_root",
+              "value": "={{ String($json.body?.command_text || $json.command_text || $json.message?.text || '').trim().split(/\\s+/)[0] || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "fdc0ec8a-d64b-4646-b217-1f0e358dd338",
+              "name": "command_subcommand",
+              "value": "={{ String($json.body?.command_text || $json.command_text || $json.message?.text || '').trim().split(/\\s+/)[1] || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "ae13cbe3-c0ad-4b48-9064-ed6a304d4cf4",
+              "name": "arg_1",
+              "value": "={{ String($json.body?.command_text || $json.command_text || $json.message?.text || '').trim().split(/\\s+/)[2] || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "fb322647-2549-4682-b947-493e802d56f5",
+              "name": "arg_2",
+              "value": "={{ String($json.body?.command_text || $json.command_text || $json.message?.text || '').trim().split(/\\s+/)[3] || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "0f767348-ed10-4166-ae88-726ccce9d30b",
+              "name": "arg_tail",
+              "value": "={{ String($json.body?.command_text || $json.command_text || $json.message?.text || '').trim().split(/\\s+/).slice(3).join(' ') }}",
+              "type": "string"
+            },
+            {
+              "id": "60f6106a-1929-4bad-add2-a3d096f93777",
+              "name": "command_action",
+              "value": "={{ (() => {\nconst p = String($json.body?.command_text || $json.command_text || $json.message?.text || '').trim().split(/\\s+/);\nconst root = p[0] || '';\nconst sub = p[1] || '';\nif (root === '/sales' && sub === 'find') return 'sales_find';\nif (root === '/sales' && sub === 'review') return 'sales_review';\nif (root === '/sales' && sub === 'approve') return 'sales_approve';\nif (root === '/sales' && sub === 'send') return 'sales_send';\nif (root === '/sales' && sub === 'followup') return 'sales_followup';\nif (root === '/client' && sub === 'start') return 'client_start';\nif (root === '/content' && sub === 'create') return 'content_create';\nif (root === '/content' && sub === 'status') return 'content_status';\nif (root === '/content' && sub === 'select') return 'content_select';\nif (root === '/status') return 'content_status';\nif (root === '/review' && sub === 'submit') return 'review_submit';\nif (root === '/review' && sub === 'queue') return 'review_queue';\nif (root === '/review' && sub === 'approve') return 'review_approve';\nif (root === '/review' && sub === 'reject') return 'review_reject';\nif (root === '/review' && sub === 'revise') return 'review_revise';\nif (root === '/deliver') return 'deliver';\nif (root === '/invoice' && sub === 'send') return 'invoice_send';\nif (root === '/summary' && sub === 'today') return 'summary_today';\nif (root === '/dashboard') return 'dashboard';\nreturn 'unknown';\n})() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fdd88ce3-501d-47c5-9e9a-c43029dccb49",
+      "name": "Normalize Command",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        300,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "06b0188b-c7c9-4fb0-a121-71e008bbbf30",
+                    "leftValue": "={{ $json.command_action }}",
+                    "rightValue": "sales_find",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "2aa01fbb-0a49-4b4f-bc76-4ade08446498",
+                    "leftValue": "={{ $json.command_action }}",
+                    "rightValue": "sales_review",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "2c6da33e-dfea-4f74-a113-f180e776958c",
+                    "leftValue": "={{ $json.command_action }}",
+                    "rightValue": "sales_approve",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "53935046-0e6f-426c-b93a-551f46461877",
+                    "leftValue": "={{ $json.command_action }}",
+                    "rightValue": "sales_send",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "9ca4ca40-ab7f-44c8-8959-21072147c905",
+                    "leftValue": "={{ $json.command_action }}",
+                    "rightValue": "sales_followup",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "3c19ce2b-10b8-4e14-8dc5-a2b192b339d7",
+                    "leftValue": "={{ $json.command_action }}",
+                    "rightValue": "client_start",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5d9c965d-c48f-4859-97e7-27f1e301c6eb",
+      "name": "Switch by Command Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        620,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3d617df3-841e-4268-81cd-7cf98ccd33ca",
+              "name": "niche",
+              "value": "={{ $json.arg_1 }}",
+              "type": "string"
+            },
+            {
+              "id": "0ac44fa5-091d-47ed-b0f2-4d32d01868cd",
+              "name": "location",
+              "value": "={{ [$json.arg_2, $json.arg_tail].filter(Boolean).join(\" \") }}",
+              "type": "string"
+            },
+            {
+              "id": "fee725af-3361-4b8e-ad66-6c1f68803a4b",
+              "name": "lead_batch_id",
+              "value": "={{ \"B\" + Date.now() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f66fc56e-bfdb-4cb3-b897-a09cd2e9d7e4",
+      "name": "sales_find - Parse Find Inputs",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        960,
+        -900
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ `insert into workflow_run (workflow_name, related_record_type, related_record_id, run_status, trigger_source, started_at) values ('WF_01_Lead_Scrape_Cold_Outreach_Client_Conversion', 'lead_batch', '${$json.lead_batch_id}', 'running', 'webhook', now()) returning *;` }}",
+        "options": {}
+      },
+      "id": "cae079d0-fd26-4044-b6eb-4d8a6e4ddd4f",
+      "name": "sales_find - Create Lead Scrape Job",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1240,
+        -900
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APIFY_GOOGLE_MAPS_ACTOR_URL }}",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ \"Bearer \" + $env.APIFY_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { searchStringsArray: [$json.niche + \" \" + $json.location], maxCrawledPlacesPerSearch: 20, language: \"en\" } }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "cfef76fd-3d6c-4b12-b580-609b2c7dc724",
+      "name": "sales_find - Apify Lead Source HTTP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1520,
+        -900
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/responses",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ \"Bearer \" + $env.OPENAI_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { model: $env.OPENAI_MODEL || \"gpt-4.1-mini\", input: \"Score these leads for weak digital visibility and content quality. Return JSON rows for lead table: \" + JSON.stringify($json) } }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "ec762ac5-2b70-4943-87cc-16038410223d",
+      "name": "sales_find - OpenAI Lead Scoring",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1800,
+        -900
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ `-- Replace json path with your OpenAI response shape if needed\\ninsert into lead (business_name, niche, location, lead_score, score_reason, pain_points, sales_stage, assigned_owner, next_action, created_at, updated_at) values ('Example Lead', '${$('sales_find - Parse Find Inputs').item.json.niche}', '${$('sales_find - Parse Find Inputs').item.json.location}', 80, 'AI scored from scrape result', '[]'::jsonb, 'qualified', 'founder', '/sales review', now(), now()) returning *;` }}",
+        "options": {}
+      },
+      "id": "7e9ddc06-f05e-4fa1-9d77-a758f3c8faad",
+      "name": "sales_find - Upsert Lead Records",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2080,
+        -900
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select * from lead where sales_stage = 'qualified' order by lead_score desc limit 10;",
+        "options": {}
+      },
+      "id": "2a10549e-caaa-4740-9c99-3bfdcb6d35c0",
+      "name": "sales_find - Aggregate Top 10 Leads",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2360,
+        -900
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "update workflow_run set run_status = 'completed', finished_at = now() where run_status = 'running' and related_record_type = 'lead_batch' returning *;",
+        "options": {}
+      },
+      "id": "64a859a5-d34a-48f4-9a92-065314a7f235",
+      "name": "sales_find - Update Workflow Run Complete",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2640,
+        -900
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a7150642-2351-4458-9c17-e6d1926dadb9",
+              "name": "ok",
+              "value": "={{ true }}",
+              "type": "string"
+            },
+            {
+              "id": "4990e97c-ced3-4915-96bd-0f6aa6304b7b",
+              "name": "action",
+              "value": "sales_find",
+              "type": "string"
+            },
+            {
+              "id": "a24ecbd2-48b9-47fe-bde5-1dce738adf2d",
+              "name": "telegram_text",
+              "value": "={{ \"Lead scrape completed. Top leads returned. Next action: /sales review\" }}",
+              "type": "string"
+            },
+            {
+              "id": "11373bb6-6432-4cbd-ac70-5715ff643395",
+              "name": "data",
+              "value": "={{ $json }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "035264f8-e142-47f8-bac4-9c36c1900203",
+      "name": "sales_find - Format Find Summary",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2920,
+        -900
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "d14f6850-4778-4319-af42-066285f011ab",
+      "name": "sales_find - Respond JSON",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        3200,
+        -900
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select * from lead where sales_stage in ('qualified', 'approved_for_outreach') order by lead_score desc limit 20;",
+        "options": {}
+      },
+      "id": "e41df885-e4af-4c04-a377-8ef671dc498e",
+      "name": "sales_review - Query Qualified Leads",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        960,
+        -600
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "de3e0306-2852-4008-9690-e236baa1fbc2",
+              "name": "ok",
+              "value": "={{ true }}",
+              "type": "string"
+            },
+            {
+              "id": "56835531-b843-4a33-b5f5-5b9bfb9f8290",
+              "name": "action",
+              "value": "sales_review",
+              "type": "string"
+            },
+            {
+              "id": "7a6e40b1-1601-484e-a138-dc2491a9567c",
+              "name": "telegram_text",
+              "value": "={{ \"Qualified leads loaded. Next action: /sales approve <lead_batch_id> or /sales send <lead_id>\" }}",
+              "type": "string"
+            },
+            {
+              "id": "f749db80-9090-4111-8de0-a8d6538022a0",
+              "name": "data",
+              "value": "={{ $json }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2faeb55d-7ae9-4f63-9556-69782e5b7678",
+      "name": "sales_review - Format Review Summary",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1240,
+        -600
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "f5c394be-28d1-4298-95d5-394699f30d59",
+      "name": "sales_review - Respond JSON",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1520,
+        -600
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ `update lead set sales_stage = 'approved_for_outreach', next_action = '/sales send ' || lead_id, updated_at = now() where lead_batch_id = '${$json.arg_1}' and sales_stage = 'qualified' returning *;` }}",
+        "options": {}
+      },
+      "id": "13049108-066b-47c3-9bbe-bfaf95ede9af",
+      "name": "sales_approve - Update Leads To Approved For Outreach",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        960,
+        -300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "57e50c4d-5c6e-420c-ad99-f9ddca6129fe",
+              "name": "ok",
+              "value": "={{ true }}",
+              "type": "string"
+            },
+            {
+              "id": "e5f6fdeb-7b52-4f96-9e33-23c505797bb4",
+              "name": "action",
+              "value": "sales_approve",
+              "type": "string"
+            },
+            {
+              "id": "830f0100-b8ee-438d-b57c-aff6c5048bb2",
+              "name": "telegram_text",
+              "value": "={{ \"Leads approved for outreach. Next action: /sales send <lead_id>\" }}",
+              "type": "string"
+            },
+            {
+              "id": "82473460-6743-4681-8631-cec56a5114ab",
+              "name": "data",
+              "value": "={{ $json }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6360a975-636c-4995-8f23-5023a89cf687",
+      "name": "sales_approve - Format Approval Summary",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1240,
+        -300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "ca1d57af-56d9-436c-955f-f6181da9e208",
+      "name": "sales_approve - Respond JSON",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1520,
+        -300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ `select * from lead where lead_id = '${$json.arg_1}' limit 1;` }}",
+        "options": {}
+      },
+      "id": "552ed9e9-1a90-4c22-9039-70aa85c35b20",
+      "name": "sales_send - Lookup Lead",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/responses",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ \"Bearer \" + $env.OPENAI_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { model: $env.OPENAI_MODEL || \"gpt-4.1-mini\", input: \"Write a concise cold outreach email for this lead. Return subject and body JSON: \" + JSON.stringify($json) } }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "b1fc1926-5d99-4cc1-8be7-75957e5a349d",
+      "name": "sales_send - OpenAI Draft Outreach",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.email || $json.client_email || $env.DEFAULT_OUTREACH_EMAIL }}",
+        "subject": "={{ $json.subject || \"Quick idea for your content\" }}",
+        "message": "={{ $json.body || JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "107285c2-24b8-41f4-9830-c861b0bdbf3d",
+      "name": "sales_send - Gmail Send Outreach",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ `update lead set sales_stage = 'outreach_sent', last_contact_at = now(), next_action = '/sales followup', updated_at = now() where lead_id = '${$('Normalize Command').item.json.arg_1}' returning *;` }}",
+        "options": {}
+      },
+      "id": "8f278fdc-c5fe-4d1f-8ff8-03913c5b121e",
+      "name": "sales_send - Update Lead Stage",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1800,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2c1a7348-cad1-4735-a82d-ea8b5845a02b",
+              "name": "ok",
+              "value": "={{ true }}",
+              "type": "string"
+            },
+            {
+              "id": "aa6880e3-bc20-471f-964f-78365afeb66e",
+              "name": "action",
+              "value": "sales_send",
+              "type": "string"
+            },
+            {
+              "id": "67ee8248-e12e-4f96-8c90-a6012f1ec91a",
+              "name": "telegram_text",
+              "value": "={{ \"Outreach sent. Next action: /sales followup\" }}",
+              "type": "string"
+            },
+            {
+              "id": "b386b13c-6220-47c8-a63a-d11f43f8efa6",
+              "name": "data",
+              "value": "={{ $json }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7753b610-625e-47d8-acc1-35c937facceb",
+      "name": "sales_send - Format Send Result",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2080,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "6792c0ea-a9e9-4e23-961f-ed750dcf2037",
+      "name": "sales_send - Respond JSON",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2360,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select * from lead where sales_stage = 'outreach_sent' and coalesce(reply_status, 'none') != 'replied' limit 25;",
+        "options": {}
+      },
+      "id": "94da96c0-ead2-43b0-a63b-fc44bf34f5bf",
+      "name": "sales_followup - Query Due Follow Ups",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        960,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/responses",
+        "authentication": "none",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ \"Bearer \" + $env.OPENAI_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { model: $env.OPENAI_MODEL || \"gpt-4.1-mini\", input: \"Draft short follow-up messages for these leads: \" + JSON.stringify($json) } }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "eeeb235a-8753-4d38-a3c2-97ed1ba5d703",
+      "name": "sales_followup - OpenAI Draft Follow Up",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.email || $json.client_email || $env.DEFAULT_OUTREACH_EMAIL }}",
+        "subject": "={{ $json.subject || \"Following up\" }}",
+        "message": "={{ $json.body || JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "d55a051a-2a74-463e-8c7f-179a9a17bde5",
+      "name": "sales_followup - Gmail Send Follow Up",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1520,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "update lead set follow_up_count = coalesce(follow_up_count, 0) + 1, last_follow_up_at = now(), updated_at = now() where sales_stage = 'outreach_sent' returning *;",
+        "options": {}
+      },
+      "id": "4154acaf-468d-45aa-8af9-b0677149c956",
+      "name": "sales_followup - Update Follow Up Metadata",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1800,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3a4680fc-a83a-4eee-88f9-fc2b6595acd3",
+              "name": "ok",
+              "value": "={{ true }}",
+              "type": "string"
+            },
+            {
+              "id": "078f9daf-d68e-4511-85a5-7a9e119e4090",
+              "name": "action",
+              "value": "sales_followup",
+              "type": "string"
+            },
+            {
+              "id": "4708f1c3-4fd7-406f-aa90-54bae53da0b4",
+              "name": "telegram_text",
+              "value": "={{ \"Follow-up processing completed.\" }}",
+              "type": "string"
+            },
+            {
+              "id": "4b091b8f-cd86-4710-9d2e-9dce0b9e11fa",
+              "name": "data",
+              "value": "={{ $json }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4fd82423-ea45-4a56-9fc3-a5e9abaafd62",
+      "name": "sales_followup - Format Follow Up Summary",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2080,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "9f8608b6-6ff1-4b09-b46a-4a98d0014f2c",
+      "name": "sales_followup - Respond JSON",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2360,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ `select * from lead where lead_id = '${$json.arg_1}' limit 1;` }}",
+        "options": {}
+      },
+      "id": "63a21cff-a65a-4647-81b1-8da0901c1d93",
+      "name": "client_start - Lookup Lead If Provided",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        960,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ `insert into client (client_name, origin_lead_id, owner, status, created_at, updated_at) values (coalesce('${$('Normalize Command').item.json.arg_1}', 'New Client'), '${$('Normalize Command').item.json.arg_1}', 'founder', 'active', now(), now()) returning *;` }}",
+        "options": {}
+      },
+      "id": "73840fc2-9a2a-4711-abc7-f3b8d7a1d3a1",
+      "name": "client_start - Create Client Record",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1240,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "insert into project (client_id, project_name, service_type, business_stage, production_stage, current_owner, waiting_on, next_action, created_at, updated_at) select client_id, client_name || ' - First Project', 'content_automation', 'Client Active', 'Brief Received', 'founder_or_team', 'internal_brief', '/content create ' || client_id || ' <goal>', now(), now() from client order by created_at desc limit 1 returning *;",
+        "options": {}
+      },
+      "id": "d2fcb9df-fd86-49f6-be16-50bc3d0291bc",
+      "name": "client_start - Create Project Shell",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1520,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "operation": "create",
+        "name": "={{ $json.project_name || \"Project Folder\" }}",
+        "options": {}
+      },
+      "id": "b1a6ee7c-eaab-4cd6-89b0-32b72c91cc50",
+      "name": "client_start - Google Drive Create Project Folder",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1800,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ `update project set drive_folder_url = '${$json.webViewLink || $json.webUrl || ('https://drive.google.com/drive/folders/' + $json.id)}', updated_at = now() where drive_folder_url is null or drive_folder_url = '' returning *;` }}",
+        "options": {}
+      },
+      "id": "c3aca60e-09ce-4154-a409-17bb993aa015",
+      "name": "client_start - Update Project Links",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2080,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ `update lead set sales_stage = 'converted_to_client', updated_at = now() where lead_id = '${$('Normalize Command').item.json.arg_1}' returning *;` }}",
+        "options": {}
+      },
+      "id": "70016215-b818-4f8a-b336-3366ebff2c77",
+      "name": "client_start - Update Lead Converted",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2360,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "544f3ee5-9493-415c-ae3f-f18fd0df4cf3",
+              "name": "ok",
+              "value": "={{ true }}",
+              "type": "string"
+            },
+            {
+              "id": "229ecc8f-65c7-4360-ac54-b6ea8308a8d0",
+              "name": "action",
+              "value": "client_start",
+              "type": "string"
+            },
+            {
+              "id": "dc79c7af-cefd-40ed-8843-4e2c13fb5d2f",
+              "name": "telegram_text",
+              "value": "={{ \"Client and project shell created. Next action: /content create <client_id> <goal>\" }}",
+              "type": "string"
+            },
+            {
+              "id": "203e0ecc-3db3-448a-b2a4-96040ce91ee0",
+              "name": "data",
+              "value": "={{ $json }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8c3fca58-b2d4-495f-9fb2-7a5a13a9aaa0",
+      "name": "client_start - Format Client Start Result",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2640,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "a0ef97b5-b6ea-4fb2-a1e4-5307dcf2d8f9",
+      "name": "client_start - Respond JSON",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2920,
+        600
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Workflow Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Command": {
+      "main": [
+        [
+          {
+            "node": "Switch by Command Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch by Command Action": {
+      "main": [
+        [
+          {
+            "node": "sales_find - Parse Find Inputs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "sales_review - Query Qualified Leads",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "sales_approve - Update Leads To Approved For Outreach",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "sales_send - Lookup Lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "sales_followup - Query Due Follow Ups",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "client_start - Lookup Lead If Provided",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sales_find - Parse Find Inputs": {
+      "main": [
+        [
+          {
+            "node": "sales_find - Create Lead Scrape Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sales_find - Create Lead Scrape Job": {
+      "main": [
+        [
+          {
+            "node": "sales_find - Apify Lead Source HTTP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sales_find - Apify Lead Source HTTP": {
+      "main": [
+        [
+          {
+            "node": "sales_find - OpenAI Lead Scoring",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sales_find - OpenAI Lead Scoring": {
+      "main": [
+        [
+          {
+            "node": "sales_find - Upsert Lead Records",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sales_find - Upsert Lead Records": {
+      "main": [
+        [
+          {
+            "node": "sales_find - Aggregate Top 10 Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sales_find - Aggregate Top 10 Leads": {
+      "main": [
+        [
+          {
+            "node": "sales_find - Update Workflow Run Complete",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sales_find - Update Workflow Run Complete": {
+      "main": [
+        [
+          {
+            "node": "sales_find - Format Find Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sales_find - Format Find Summary": {
+      "main": [
+        [
+          {
+            "node": "sales_find - Respond JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sales_review - Query Qualified Leads": {
+      "main": [
+        [
+          {
+            "node": "sales_review - Format Review Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sales_review - Format Review Summary": {
+      "main": [
+        [
+          {
+            "node": "sales_review - Respond JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sales_approve - Update Leads To Approved For Outreach": {
+      "main": [
+        [
+          {
+            "node": "sales_approve - Format Approval Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sales_approve - Format Approval Summary": {
+      "main": [
+        [
+          {
+            "node": "sales_approve - Respond JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sales_send - Lookup Lead": {
+      "main": [
+        [
+          {
+            "node": "sales_send - OpenAI Draft Outreach",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sales_send - OpenAI Draft Outreach": {
+      "main": [
+        [
+          {
+            "node": "sales_send - Gmail Send Outreach",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sales_send - Gmail Send Outreach": {
+      "main": [
+        [
+          {
+            "node": "sales_send - Update Lead Stage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sales_send - Update Lead Stage": {
+      "main": [
+        [
+          {
+            "node": "sales_send - Format Send Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sales_send - Format Send Result": {
+      "main": [
+        [
+          {
+            "node": "sales_send - Respond JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sales_followup - Query Due Follow Ups": {
+      "main": [
+        [
+          {
+            "node": "sales_followup - OpenAI Draft Follow Up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sales_followup - OpenAI Draft Follow Up": {
+      "main": [
+        [
+          {
+            "node": "sales_followup - Gmail Send Follow Up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sales_followup - Gmail Send Follow Up": {
+      "main": [
+        [
+          {
+            "node": "sales_followup - Update Follow Up Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sales_followup - Update Follow Up Metadata": {
+      "main": [
+        [
+          {
+            "node": "sales_followup - Format Follow Up Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "sales_followup - Format Follow Up Summary": {
+      "main": [
+        [
+          {
+            "node": "sales_followup - Respond JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "client_start - Lookup Lead If Provided": {
+      "main": [
+        [
+          {
+            "node": "client_start - Create Client Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "client_start - Create Client Record": {
+      "main": [
+        [
+          {
+            "node": "client_start - Create Project Shell",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "client_start - Create Project Shell": {
+      "main": [
+        [
+          {
+            "node": "client_start - Google Drive Create Project Folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "client_start - Google Drive Create Project Folder": {
+      "main": [
+        [
+          {
+            "node": "client_start - Update Project Links",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "client_start - Update Project Links": {
+      "main": [
+        [
+          {
+            "node": "client_start - Update Lead Converted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "client_start - Update Lead Converted": {
+      "main": [
+        [
+          {
+            "node": "client_start - Format Client Start Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "client_start - Format Client Start Result": {
+      "main": [
+        [
+          {
+            "node": "client_start - Respond JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "83214f88-e51b-4508-99d2-f75411a769d8",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "4ebc34b8-3da4-4a01-a662-5de9ea3a8f4b",
+  "tags": []
+}
