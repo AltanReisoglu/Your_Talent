@@ -171,6 +171,38 @@ Bu akış `compose.yaml` üzerinden:
 - proje klasörünü `/app` olarak mount eder
 - `uvicorn` ile `app.main:app` servisini `8000` portunda çalıştırır
 
+## C# API Gateway
+
+Python agent runtime aynı kalır; C# yalnızca kullanıcı input/output gateway'i
+olarak çalışır. C# API, `scripts/invoke_agent.py` bridge script'ini subprocess
+olarak çağırır.
+
+Build:
+
+```bash
+DOTNET_CLI_HOME=/tmp/dotnet dotnet build dotnet-api/FinWiki.Api.csproj
+```
+
+Run:
+
+```bash
+DOTNET_CLI_HOME=/tmp/dotnet \
+FINWIKI_DOTNET_URL=http://0.0.0.0:8000 \
+dotnet run --project dotnet-api/FinWiki.Api.csproj
+```
+
+Invoke:
+
+```bash
+curl -X POST http://localhost:8000/invoke \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "local-user",
+    "session_id": "demo-1",
+    "message": "DCF nedir?"
+  }'
+```
+
 ## LLM Wiki Katmanları
 
 FinWiki üç katmanı bilinçli olarak ayrı tutar:

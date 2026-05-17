@@ -1,7 +1,7 @@
 ---
 title: FinWiki Index
-last_updated: 2026-05-05
-total_pages: 0
+last_updated: 2026-05-17
+total_pages: 1
 ---
 
 # FinWiki — Knowledge Base Index
@@ -10,6 +10,7 @@ total_pages: 0
 
 ## Concepts
 <!-- Agent tarafından doldurulacak -->
+- [Discounted Cash Flow (DCF)](concepts/discounted-cash-flow-dcf.md) — A fundamental valuation method that estimates the value of an investment based on the present value of its expected future cash flows.
 
 ## Instruments
 <!-- Agent tarafından doldurulacak -->
