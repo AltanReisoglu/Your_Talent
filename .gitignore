@@ -9,3 +9,7 @@ __pycache__/
 # .NET build outputs
 bin/
 obj/
+
+# Agent hook runtime state
+.hook-state/
+reports/

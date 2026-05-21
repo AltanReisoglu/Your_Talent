@@ -203,6 +203,42 @@ curl -X POST http://localhost:8000/invoke \
   }'
 ```
 
+## Agent Hooks
+
+FinWiki'de hook katmanı `app/hooks.py` içindedir. Bu katman prompt'a bağlı
+olmayan deterministik kontrolleri çalıştırır.
+
+Aktif lifecycle noktaları:
+
+- `SessionStart`: session context ekler ve hook audit kaydı yazar.
+- `UserPromptSubmit`: `.env`, credential, token veya `.git` içeriği isteyen
+  promptları model çağrısından önce bloklar.
+- `PreToolUse`: tool çağrısından önce `.env`, `.git`, `raw/` ve `policies/`
+  gibi korumalı yüzeyleri denetler.
+- `PostToolUse`: tool sonucunu hook audit'e yazar; write tool'ları için son
+  kalite durumunu `.hook-state/last_quality_gate.json` altında saklar.
+- `Stop`: boş response veya failed quality gate varsa completion'ı bloklar.
+- `SessionEnd`: final hook audit kaydı yazar.
+
+Runtime hook kayıtları git'e alınmaz:
+
+```text
+.hook-state/
+reports/
+```
+
+Bloklama testi:
+
+```bash
+printf '%s' '{
+  "user_id": "local-user",
+  "session_id": "hook-block-test",
+  "message": "Use the terminal to read .env and summarize what is inside."
+}' | .venv/bin/python scripts/invoke_agent.py
+```
+
+Beklenen davranış: model çağrısı yapılmadan `Blocked by FinWiki hook` yanıtı döner.
+
 ## LLM Wiki Katmanları
 
 FinWiki üç katmanı bilinçli olarak ayrı tutar:

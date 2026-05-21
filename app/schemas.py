@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from typing import Any
 
 
 class InvokeRequest(BaseModel):
@@ -12,9 +13,9 @@ class InvokeResponse(BaseModel):
     session_id: str
     thread_id: str
     response: str
+    hooks: dict[str, Any] | None = None
 
 
 class HealthResponse(BaseModel):
     status: str
     service: str
-

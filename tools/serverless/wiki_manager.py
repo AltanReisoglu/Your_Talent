@@ -13,6 +13,8 @@ from collections import Counter, defaultdict
 from datetime import datetime
 from typing import Dict, List, Optional
 
+from app.hooks import hooked_tool
+
 _WIKI_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "wiki")
 )
@@ -316,6 +318,7 @@ def _source_fingerprint(source_path: str) -> Dict[str, object]:
     }
 
 
+@hooked_tool
 def read_wiki_page(relative_path: str) -> str:
     """Read a wiki markdown page.
 
@@ -332,6 +335,7 @@ def read_wiki_page(relative_path: str) -> str:
         return f.read()
 
 
+@hooked_tool
 def write_wiki_page(relative_path: str, content: str) -> str:
     """Write or overwrite a wiki markdown page.
 
@@ -373,6 +377,7 @@ def suggest_wiki_path(title: str, category: str) -> str:
     return f"{directory}/{_slugify(title)}.md"
 
 
+@hooked_tool
 def upsert_wiki_page(
     title: str,
     category: str,
@@ -459,6 +464,7 @@ def upsert_wiki_page(
     return f"[WikiManager] Upserted: {page_path}.{suffix}"
 
 
+@hooked_tool
 def list_wiki_pages(category: Optional[str] = None) -> List[str]:
     """List wiki pages. If category is given, restrict to that subdirectory.
 
@@ -481,6 +487,7 @@ def list_wiki_pages(category: Optional[str] = None) -> List[str]:
     return sorted(results)
 
 
+@hooked_tool
 def update_index(page_path: str, title: str, category: str, summary: str = "") -> str:
     """Add or update a page entry in /wiki/index.md.
 
@@ -591,6 +598,7 @@ total_pages: 0
     return f"[WikiManager] Index updated: {title} under {category}"
 
 
+@hooked_tool
 def append_log(operation: str, topic: str, summary: str) -> str:
     """Append an entry to /wiki/log.md.
 
@@ -621,6 +629,7 @@ def append_log(operation: str, topic: str, summary: str) -> str:
     return f"[WikiManager] Logged: {operation} | {topic}"
 
 
+@hooked_tool
 def register_source(source_path: str, pages: Optional[List[str]] = None, notes: str = "") -> str:
     """Register an ingested raw source in the FinWiki manifest.
 
@@ -656,11 +665,13 @@ def register_source(source_path: str, pages: Optional[List[str]] = None, notes: 
     return f"[WikiManager] Source registered: {key} ({status})"
 
 
+@hooked_tool
 def read_source_manifest() -> str:
     """Read the source ingestion manifest as formatted JSON."""
     return json.dumps(_read_manifest(), indent=2, sort_keys=True)
 
 
+@hooked_tool
 def source_lineage(page_path: Optional[str] = None, source_path: Optional[str] = None) -> str:
     """Trace raw source -> manifest -> wiki page lineage.
 
@@ -723,6 +734,7 @@ def source_lineage(page_path: Optional[str] = None, source_path: Optional[str] =
     return "\n".join(lines)
 
 
+@hooked_tool
 def search_wiki(query: str, category: Optional[str] = None, limit: int = 10) -> List[str]:
     """Run local BM25-style search over wiki markdown pages.
 
@@ -802,6 +814,7 @@ def search_wiki(query: str, category: Optional[str] = None, limit: int = 10) -> 
     ]
 
 
+@hooked_tool
 def verify_wiki_claim(claim: str, page_path: Optional[str] = None, limit: int = 5) -> str:
     """Trace a claim to candidate wiki pages and registered sources.
 
@@ -860,6 +873,7 @@ def verify_wiki_claim(claim: str, page_path: Optional[str] = None, limit: int = 
     return "\n".join(lines)
 
 
+@hooked_tool
 def freshness_report(category: Optional[str] = None) -> str:
     """Report stale wiki pages using finance-specific freshness thresholds."""
     pages = [page for page in list_wiki_pages(category) if page not in ("index.md", "log.md")]
@@ -897,6 +911,7 @@ def freshness_report(category: Optional[str] = None) -> str:
     return "\n".join(lines)
 
 
+@hooked_tool
 def lint_wiki() -> str:
     """Run a deterministic read-only wiki health check."""
     pages = [page for page in list_wiki_pages() if page not in ("index.md", "log.md")]

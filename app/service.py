@@ -1,6 +1,8 @@
 import os
 from typing import Any
 
+from app.hooks import HookBlocked, session_end, session_start, stop, user_prompt_submit
+
 
 def load_local_env(path: str = ".env") -> None:
     """Load KEY=VALUE pairs from a local .env file without extra dependencies."""
@@ -37,28 +39,41 @@ def build_thread_id(user_id: str, session_id: str) -> str:
     return f"finwiki:{user_id}:{session_id}"
 
 
-def invoke_agent(message: str, user_id: str, session_id: str) -> dict[str, str]:
+def invoke_agent(message: str, user_id: str, session_id: str) -> dict[str, Any]:
     load_local_env()
 
     from agents.host_agent.agent import get_agent
 
     thread_id = build_thread_id(user_id, session_id)
-    agent = get_agent()
-    result = agent.invoke(
-        {"messages": [{"role": "user", "content": message}]},
-        config={"configurable": {"thread_id": thread_id}},
-    )
+    trace, session_context = session_start(user_id=user_id, session_id=session_id)
+    try:
+        hooked_message = user_prompt_submit(message, trace)
+        model_message = f"{session_context}\n\n{hooked_message}"
+        agent = get_agent()
+        result = agent.invoke(
+            {"messages": [{"role": "user", "content": model_message}]},
+            config={"configurable": {"thread_id": thread_id}},
+        )
 
-    response_text = ""
-    for msg in reversed(result.get("messages", [])):
-        if getattr(msg, "type", None) == "ai" and hasattr(msg, "content"):
-            response_text = message_text(msg.content)
-            break
+        response_text = ""
+        for msg in reversed(result.get("messages", [])):
+            if getattr(msg, "type", None) == "ai" and hasattr(msg, "content"):
+                response_text = message_text(msg.content)
+                break
+
+        response_text = stop(response_text, trace)
+        session_end(trace, status="passed")
+    except HookBlocked as exc:
+        response_text = f"Blocked by FinWiki hook: {exc}"
+        session_end(trace, status="blocked", error=str(exc))
+    except Exception as exc:
+        session_end(trace, status="failed", error=str(exc))
+        raise
 
     return {
         "user_id": user_id,
         "session_id": session_id,
         "thread_id": thread_id,
         "response": response_text,
+        "hooks": trace.summary(),
     }
-

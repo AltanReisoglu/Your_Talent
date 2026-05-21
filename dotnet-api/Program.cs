@@ -131,5 +131,6 @@ record InvokeResponse(
     [property: JsonPropertyName("user_id")] string UserId,
     [property: JsonPropertyName("session_id")] string SessionId,
     [property: JsonPropertyName("thread_id")] string ThreadId,
-    [property: JsonPropertyName("response")] string Response
+    [property: JsonPropertyName("response")] string Response,
+    [property: JsonPropertyName("hooks")] JsonElement? Hooks
 );

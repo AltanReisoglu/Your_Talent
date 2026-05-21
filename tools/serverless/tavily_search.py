@@ -2,6 +2,8 @@ import os
 from typing import Literal
 from tavily import TavilyClient
 
+from app.hooks import hooked_tool
+
 def _get_tavily_client() -> TavilyClient:
     key = os.environ.get("TAVILY_API_KEY")
     if not key:
@@ -11,6 +13,7 @@ def _get_tavily_client() -> TavilyClient:
         )
     return TavilyClient(api_key=key)
 
+@hooked_tool
 def internet_search(
     query: str,
     max_results: int = 5,
