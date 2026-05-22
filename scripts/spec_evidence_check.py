@@ -13,7 +13,6 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SPECS_DIR = REPO_ROOT / "specs"
-REQUIRED = ("spec.md", "plan.md", "tasks.md")
 EVIDENCE = "evidence.md"
 UNCLEAR_MARKERS = ("[NEEDS CLARIFICATION",)
 PLACEHOLDER_MARKERS = ("[command]", "[passed/failed/not-run]", "[notes]")
@@ -35,12 +34,23 @@ def _read(path: Path) -> str:
         return path.read_text(errors="replace")
 
 
-def validate_feature(feature: Path, require_evidence: bool) -> list[str]:
+def validate_feature(
+    feature: Path,
+    require_plan: bool,
+    require_tasks: bool,
+    require_evidence: bool,
+) -> list[str]:
     errors: list[str] = []
     if not feature.exists():
         return [f"Missing feature directory: {feature.relative_to(REPO_ROOT)}"]
 
-    for filename in REQUIRED:
+    required = ["spec.md"]
+    if require_plan:
+        required.append("plan.md")
+    if require_tasks:
+        required.append("tasks.md")
+
+    for filename in required:
         path = feature / filename
         if not path.exists():
             errors.append(f"{feature.name}: missing {filename}")
@@ -49,6 +59,14 @@ def validate_feature(feature: Path, require_evidence: bool) -> list[str]:
         for marker in UNCLEAR_MARKERS:
             if marker in text:
                 errors.append(f"{feature.name}: unresolved clarification marker in {filename}")
+
+    for filename in ("plan.md", "tasks.md"):
+        path = feature / filename
+        if path.exists():
+            text = _read(path)
+            for marker in UNCLEAR_MARKERS:
+                if marker in text:
+                    errors.append(f"{feature.name}: unresolved clarification marker in {filename}")
 
     evidence = feature / EVIDENCE
     if require_evidence and not evidence.exists():
@@ -66,6 +84,16 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--feature", help="Feature directory name under specs/")
     parser.add_argument(
+        "--require-plan",
+        action="store_true",
+        help="Require plan.md for each checked feature",
+    )
+    parser.add_argument(
+        "--require-tasks",
+        action="store_true",
+        help="Require tasks.md for each checked feature",
+    )
+    parser.add_argument(
         "--require-evidence",
         action="store_true",
         help="Require evidence.md for each checked feature",
@@ -79,7 +107,14 @@ def main() -> int:
 
     errors: list[str] = []
     for feature in features:
-        errors.extend(validate_feature(feature, args.require_evidence))
+        errors.extend(
+            validate_feature(
+                feature,
+                require_plan=args.require_plan,
+                require_tasks=args.require_tasks,
+                require_evidence=args.require_evidence,
+            )
+        )
 
     if errors:
         print("Spec evidence check failed:")

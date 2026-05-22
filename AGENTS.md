@@ -315,6 +315,9 @@ Her claim sonuna [Kaynak: URL] ekle. Kaynak yoksa [Kaynak: LLM synthesis] yaz.
 Kullanıcının diline göre cevap ver. Wiki sayfaları İngilizce olsun (evrensel erişim).
 
 <!-- SPECKIT START -->
-For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan
+Current Spec Kit plan: `specs/002-obsidian-workspace/plan.md`
+
+For this feature, keep Spec Kit artifacts canonical under `specs/` and use
+Obsidian as the navigation/knowledge workspace around specs, FinWiki pages,
+architecture docs, logs, and evidence bundles.
 <!-- SPECKIT END -->

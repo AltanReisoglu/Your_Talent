@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FinWiki Obsidian Project Page Frontmatter",
+  "type": "object",
+  "required": ["title", "type", "tags", "last_updated", "status"],
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "project-index",
+        "feature-index",
+        "feature-summary",
+        "decision-index",
+        "evidence-index",
+        "methodology"
+      ]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "last_updated": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "active", "implemented", "archived"]
+    },
+    "feature_id": {
+      "type": "string",
+      "pattern": "^\\d{3}-.+"
+    },
+    "spec_path": {
+      "type": "string"
+    },
+    "plan_path": {
+      "type": "string"
+    },
+    "tasks_path": {
+      "type": "string"
+    },
+    "evidence_path": {
+      "type": "string"
+    },
+    "related": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": true
+}
