@@ -19,6 +19,12 @@ Sonuç: **Bir finansal wikipedia** oluşturur.
 
 ```
 .
+├── .agents/
+│   └── skills/                    # Spec Kit Codex skills ($speckit-*)
+├── .specify/                      # GitHub Spec Kit infrastructure
+│   ├── memory/constitution.md      # Project coding constitution
+│   ├── scripts/bash/              # Spec Kit workflow scripts
+│   └── templates/                 # Spec/plan/tasks/evidence templates
 ├── AGENTS.md                     # Agent identity & operating procedures
 ├── agents/
 │   ├── fanout_agent.py           # Fan-in synthesizer for parallel research lanes
@@ -45,6 +51,7 @@ Sonuç: **Bir finansal wikipedia** oluşturur.
 ├── raw/                          # Immutable source layer
 │   ├── sources/                  # Articles, reports, filings, datasets
 │   └── assets/                   # Downloaded images and attachments
+├── specs/                        # Spec Kit feature artifacts (created per feature)
 ├── tools/
 │   └── serverless/
 │       ├── tavily_search.py      # Web arama (Tavily)
@@ -202,6 +209,65 @@ curl -X POST http://localhost:8000/invoke \
     "message": "DCF nedir?"
   }'
 ```
+
+## Spec-Driven Development with Spec Kit
+
+Bu repo GitHub Spec Kit'in Codex entegrasyonu ile başlatılmıştır. AI destekli
+kod yazarken varsayılan akış artık spec-first çalışır.
+
+Ana sözleşme:
+
+```text
+.specify/memory/constitution.md
+```
+
+Feature artifact'leri Spec Kit standardına göre şurada üretilir:
+
+```text
+specs/NNN-feature-name/
+├── spec.md
+├── plan.md
+├── research.md
+├── data-model.md
+├── quickstart.md
+├── contracts/
+├── tasks.md
+└── evidence.md
+```
+
+Codex içinde kullanılacak resmi Spec Kit skill akışı:
+
+```text
+$speckit-constitution   # Proje ilkelerini oluştur/güncelle
+$speckit-specify        # Ne ve neden sorularını feature spec'e dönüştür
+$speckit-clarify        # Belirsizlikleri azalt
+$speckit-checklist      # Gereksinim kalitesini kontrol et
+$speckit-plan           # Teknik plan ve constitution check üret
+$speckit-tasks          # Küçük, dosya bazlı görevler üret
+$speckit-analyze        # Spec/plan/tasks tutarlılığını kontrol et
+$speckit-implement      # Görevleri sırayla uygula
+```
+
+FinWiki ek kuralı: commit veya push öncesi `evidence.md` doldurulur. Bu dosya
+hangi kontrollerin çalıştığını, hangilerinin çalışmadığını ve kalan riski
+kaydeder.
+
+Evidence kontrolü:
+
+```bash
+.venv/bin/python scripts/spec_evidence_check.py --require-evidence
+```
+
+Henüz feature artifact'i yoksa komut no-op döner. Belirli bir feature için:
+
+```bash
+.venv/bin/python scripts/spec_evidence_check.py \
+  --feature 001-add-agent-streaming \
+  --require-evidence
+```
+
+Küçük typo/dokümantasyon düzeltmeleri tam SDD akışını atlayabilir; ancak final
+notunda neden lightweight yol kullanıldığı belirtilmelidir.
 
 ## Agent Hooks
 

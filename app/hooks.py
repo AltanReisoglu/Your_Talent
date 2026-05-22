@@ -45,6 +45,26 @@ FINANCE_CONTEXT_TERMS = {
     "spk",
 }
 
+CODE_CHANGE_CONTEXT_TERMS = {
+    "api",
+    "build",
+    "c#",
+    "code",
+    "commit",
+    "deploy",
+    "dotnet",
+    "endpoint",
+    "feature",
+    "fix",
+    "hook",
+    "implement",
+    "kod",
+    "push",
+    "refactor",
+    "runtime",
+    "test",
+}
+
 WRITE_TOOLS = {
     "write_wiki_page",
     "upsert_wiki_page",
@@ -149,6 +169,11 @@ def _looks_financial(prompt: str) -> bool:
     return any(term in lower for term in FINANCE_CONTEXT_TERMS)
 
 
+def _looks_code_change(prompt: str) -> bool:
+    lower = prompt.lower()
+    return any(term in lower for term in CODE_CHANGE_CONTEXT_TERMS)
+
+
 def _iter_path_values(payload: dict[str, Any]) -> list[str]:
     paths: list[str] = []
     for key, value in payload.items():
@@ -170,7 +195,8 @@ def session_start(user_id: str, session_id: str) -> tuple[HookTrace, str]:
     context = (
         "FinWiki hook context: enforce no secret exposure, keep raw sources "
         "immutable, preserve policy memory as read-only, cite financial claims, "
-        "and avoid personalized investment advice."
+        "avoid personalized investment advice, and use Spec Kit artifacts for "
+        "non-trivial AI-assisted code changes."
     )
     trace.add("SessionStart", "context_added", {"context": context})
     _append_audit("SessionStart", "context_added", {"user_id": user_id, "session_id": session_id})
@@ -190,6 +216,13 @@ def user_prompt_submit(prompt: str, trace: HookTrace) -> str:
         contexts.append(
             "Financial request detected: provide research/education framing, "
             "include risks and assumptions, and do not give direct buy/sell advice."
+        )
+
+    if _looks_code_change(prompt):
+        contexts.append(
+            "Code-change request detected: follow the Spec Kit workflow in "
+            ".specify/memory/constitution.md. Use specs/<feature>/spec.md, "
+            "plan.md, tasks.md, and evidence.md for non-trivial changes."
         )
 
     if contexts:
@@ -285,4 +318,3 @@ def hooked_tool(func: T) -> T:
         return result
 
     return wrapper  # type: ignore[return-value]
-

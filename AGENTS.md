@@ -168,6 +168,31 @@ FinWiki `/wiki/` klasörü Obsidian vault gibi okunacak şekilde tasarlanır:
 - No advice: Kesin al/sat dili yok; senaryo, varsayım, risk ve belirsizlik çerçevesi var.
 - Private-first: Lokal Markdown wiki birincil gerçekliktir; qmd/GraphRAG/LightRAG gibi arama katmanları wiki üstüne eklenebilir ama wiki'yi ikame etmez.
 
+## Spec-Driven Development for AI Coding
+FinWiki kod değişiklikleri GitHub Spec Kit akışıyla yönetilir:
+- Ana coding constitution: `.specify/memory/constitution.md`
+- Resmi Spec Kit altyapısı: `.specify/`
+- Codex skill entegrasyonu: `.agents/skills/speckit-*`
+- Feature artifact'leri: `specs/NNN-feature-name/`
+
+Non-trivial kod/runtime/API değişikliklerinde kod yazmadan önce Spec Kit akışı kullan:
+1. `$speckit-specify` ile kullanıcı ihtiyacı, acceptance criteria ve measurable outcomes yazılır.
+2. Gerekirse `$speckit-clarify` ve `$speckit-checklist` ile belirsizlik temizlenir.
+3. `$speckit-plan` ile teknik plan ve constitution check üretilir.
+4. `$speckit-tasks` ile küçük, dosya bazlı ve testlenebilir görevler çıkarılır.
+5. `$speckit-analyze` ile spec/plan/tasks tutarlılığı kontrol edilir.
+6. `$speckit-implement` ile görevler uygulanır.
+7. Commit veya push öncesi `evidence.md` doldurulur.
+
+Tiny typo, küçük README düzeltmesi veya acil hotfix tam SDD akışını atlayabilir;
+bu durumda final yanıtta lightweight yolun neden seçildiği açıkça yazılır.
+
+Evidence bundle kuralı:
+- Çalıştırılan kontroller, komutları ve sonuçları yaz.
+- Çalıştırılmayan kontrolleri ve nedenlerini yaz.
+- Kalan riskleri yaz.
+- Secret scan, Python syntax check ve C# build mümkünse evidence'a eklenir.
+
 ## Her Sorgu Sonrası (Orchestrator Koordinasyonu)
 1. Orchestrator routing kararı verir
 2. İlgili alt ajan(lar) çalışır
@@ -288,3 +313,8 @@ Her claim sonuna [Kaynak: URL] ekle. Kaynak yoksa [Kaynak: LLM synthesis] yaz.
 
 ## Dil
 Kullanıcının diline göre cevap ver. Wiki sayfaları İngilizce olsun (evrensel erişim).
+
+<!-- SPECKIT START -->
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
+<!-- SPECKIT END -->
