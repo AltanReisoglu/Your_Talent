@@ -252,17 +252,19 @@ FinWiki ek kuralı: commit veya push öncesi `evidence.md` doldurulur. Bu dosya
 hangi kontrollerin çalıştığını, hangilerinin çalışmadığını ve kalan riski
 kaydeder.
 
-Evidence kontrolü:
-
-```bash
-.venv/bin/python scripts/spec_evidence_check.py --require-evidence
-```
-
-Henüz feature artifact'i yoksa komut no-op döner. Belirli bir feature için:
+Plan aşamasına gelmiş feature için kontrol:
 
 ```bash
 .venv/bin/python scripts/spec_evidence_check.py \
-  --feature 001-add-agent-streaming \
+  --feature 002-obsidian-workspace \
+  --require-plan
+```
+
+Tamamlanmış feature için evidence kontrolü:
+
+```bash
+.venv/bin/python scripts/spec_evidence_check.py \
+  --feature 001-spec-kit-sdd-foundation \
   --require-evidence
 ```
 
