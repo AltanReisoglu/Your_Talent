@@ -7,6 +7,8 @@ from langchain_core.language_models.chat_models import BaseChatModel
 
 DEFAULT_FINWIKI_MODEL = "google_genai:gemini-2.5-flash"
 VERTEX_OPENAI_PROVIDER = "vertex_openai"
+HUGGINGFACE_OPENAI_PROVIDER = "huggingface_openai"
+HF_ROUTER_PROVIDER = "hf_router"
 
 
 def _truthy(value: str | None) -> bool:
@@ -74,10 +76,34 @@ def _vertex_openai_model() -> BaseChatModel:
     )
 
 
+def _huggingface_openai_model() -> BaseChatModel:
+    from langchain_openai import ChatOpenAI
+
+    token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACEHUB_API_TOKEN")
+    if not token:
+        raise RuntimeError(
+            "Hugging Face Router mode requires HF_TOKEN "
+            "or HUGGINGFACEHUB_API_TOKEN."
+        )
+
+    return ChatOpenAI(
+        model=os.environ.get("HF_MODEL", "Qwen/Qwen3.6-27B:featherless-ai"),
+        api_key=token,
+        base_url=os.environ.get("HF_ROUTER_BASE_URL", "https://router.huggingface.co/v1"),
+        timeout=float(os.environ.get("HF_TIMEOUT", "120")),
+        max_retries=int(os.environ.get("HF_MAX_RETRIES", "2")),
+    )
+
+
 def finwiki_model() -> str | BaseChatModel:
     """Return the configured chat model for all FinWiki agents."""
     provider = os.environ.get("FINWIKI_MODEL_PROVIDER", "").lower()
     model = os.environ.get("FINWIKI_MODEL", DEFAULT_FINWIKI_MODEL)
     if provider == VERTEX_OPENAI_PROVIDER or model == VERTEX_OPENAI_PROVIDER:
         return _vertex_openai_model()
+    if provider in {HUGGINGFACE_OPENAI_PROVIDER, HF_ROUTER_PROVIDER} or model in {
+        HUGGINGFACE_OPENAI_PROVIDER,
+        HF_ROUTER_PROVIDER,
+    }:
+        return _huggingface_openai_model()
     return model

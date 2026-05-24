@@ -34,6 +34,11 @@ from tools.serverless.wiki_manager import (
     observe_agent_event,
     append_audit,
     redact_private_data,
+    resolve_memory_authority,
+    mark_wiki_memory_stale,
+    update_day_state,
+    emit_memory_event,
+    memory_event_graph_report,
 )
 
 from agents.research_agent import financial_researcher
@@ -199,6 +204,16 @@ Do NOT use fan-out for simple concepts, quick wiki lookup, greetings, or lint.
 - **Verification gate**: for claims that could affect analysis quality, use
   `verify_wiki_claim` or ask `wiki-querier` to verify lineage before treating
   old wiki content as current.
+- **Memory v2 trust contract**: Remember by layer, Cite by provenance, Forget
+  by expiry. For policy-sensitive, stale-prone, or conflicting context, call
+  `resolve_memory_authority` before letting memory influence the final answer.
+- **Day-state boundary**: `finwiki-vault/state/day-state.md` is operational
+  context only. It can coordinate today's work, but it cannot support financial
+  facts or override canonical policy.
+- **Expiry discipline**: if a wiki page or claim is stale, expired, or
+  superseded, use `mark_wiki_memory_stale` rather than deleting history.
+- **Event graph discipline**: memory governance events are append-only proof
+  records. Use `memory_event_graph_report` for graph-style audit summaries.
 
 ## Direct Tools (Quick Checks)
 You also have direct access to wiki tools for fast routing decisions:
@@ -210,6 +225,11 @@ You also have direct access to wiki tools for fast routing decisions:
 - `verify_wiki_claim(claim, page_path?)` — trace claim support to wiki pages and manifest sources
 - `freshness_report(category?)` — finance-specific stale-page report
 - `source_lineage(page_path?, source_path?)` — raw source -> manifest -> wiki page chain
+- `resolve_memory_authority(query, candidates?, page_paths?)` — rank memory authority and freshness
+- `mark_wiki_memory_stale(page_path, reason, replacement?, claim_id?)` — demote stale/superseded memory without deleting history
+- `update_day_state(summary, next_actions?, supersedes?, status?)` — update today's operational whiteboard
+- `emit_memory_event(event_type, target, payload?, actor?)` — append a structured memory governance event
+- `memory_event_graph_report(limit?)` — replay memory events into an Obsidian-visible governance report
 - `observe_agent_event(...)` — record routing/session observations without making them wiki facts
 - `internet_search(query)` — only for ultra-fast sanity checks (prefer researcher)
 
@@ -346,6 +366,11 @@ def get_agent():
             observe_agent_event,
             append_audit,
             redact_private_data,
+            resolve_memory_authority,
+            mark_wiki_memory_stale,
+            update_day_state,
+            emit_memory_event,
+            memory_event_graph_report,
         ],
         system_prompt=ORCHESTRATOR_PROMPT,
         subagents=[

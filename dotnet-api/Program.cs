@@ -10,6 +10,9 @@ var jsonOptions = new JsonSerializerOptions
     WriteIndented = false
 };
 
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.MapGet("/health", () => Results.Ok(new
 {
     status = "ok",
@@ -109,7 +112,7 @@ static string ResolvePythonPath(string repoRoot)
 
 static string Redact(string text)
 {
-    foreach (var key in new[] { "GOOGLE_API_KEY", "TAVILY_API_KEY", "LANGSMITH_API_KEY" })
+    foreach (var key in new[] { "GOOGLE_API_KEY", "TAVILY_API_KEY", "HF_TOKEN", "HUGGINGFACEHUB_API_TOKEN", "LANGSMITH_API_KEY" })
     {
         var value = Environment.GetEnvironmentVariable(key);
         if (!string.IsNullOrWhiteSpace(value))

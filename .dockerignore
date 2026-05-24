@@ -4,4 +4,14 @@ __pycache__
 .pytest_cache
 .mypy_cache
 .DS_Store
-.env
+.env*
+!.env.example
+bin/
+obj/
+reports/
+.hook-state/
+coverage/
+node_modules/
+*.log*
+Dockerfile*
+.dockerignore

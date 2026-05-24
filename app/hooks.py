@@ -71,6 +71,8 @@ WRITE_TOOLS = {
     "update_index",
     "append_log",
     "register_source",
+    "mark_wiki_memory_stale",
+    "update_day_state",
 }
 
 PATH_KEYS = {
@@ -147,6 +149,8 @@ def _redact(value: Any) -> Any:
     secret_values = [
         os.environ.get("GOOGLE_API_KEY"),
         os.environ.get("TAVILY_API_KEY"),
+        os.environ.get("HF_TOKEN"),
+        os.environ.get("HUGGINGFACEHUB_API_TOKEN"),
         os.environ.get("LANGSMITH_API_KEY"),
         os.environ.get("VERTEX_AI_ACCESS_TOKEN"),
     ]

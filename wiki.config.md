@@ -6,7 +6,7 @@
 - Flavor: financial-services
 - Audience: financial analysts, operators, researchers, agent workflows, and technical users who need source-backed financial context
 - Primary language: wiki pages in English; user-facing answers in the user's language
-- Interface: local Markdown wiki compatible with Obsidian
+- Interface: Obsidian-native local Markdown vault
 
 ## Purpose
 
@@ -17,8 +17,14 @@ auditable, fresh, and easy to query.
 
 ## Knowledge Layers
 
-- `raw/`: immutable source material and attachments
-- `wiki/`: compiled financial knowledge base
+- `finwiki-vault/raw/`: immutable source material and attachments
+- `finwiki-vault/raw/assets/`: Obsidian attachment folder
+- `finwiki-vault/wiki/`: canonical Obsidian Markdown knowledge base
+- `finwiki-vault/home.md`: human entry point for the vault
+- `wiki/project/`: Obsidian-facing project navigation for specs, evidence,
+  architecture, and methodology; this is navigation, not canonical Spec Kit
+  storage
+- `wiki/templates/`: manual Obsidian templates
 - `derived/`: generated artifacts such as tables, briefs, decks, datasets, and exports
 - `prompts/`: local workflow prompts for this wiki
 - `logs/maintenance-log.md`: human-readable maintenance and lint history
@@ -56,6 +62,11 @@ auditable, fresh, and easy to query.
 10. Use `verify_wiki_claim` before relying on stale or high-impact claims.
 11. Use `freshness_report` for time-sensitive company, market, macro, regulation, and strategy pages.
 12. Use `observe_agent_event` for operational learnings; do not store financial facts there.
+13. Keep Spec Kit artifacts canonical under `specs/`; Obsidian project pages
+    under `wiki/project/` may summarize and link them but must not replace them.
+14. Regenerate Obsidian project navigation with
+    `scripts/update_obsidian_project_index.py` after feature status, tasks, or
+    evidence changes.
 
 ## Quality Bar
 
@@ -68,6 +79,8 @@ auditable, fresh, and easy to query.
 - Mutation events are audit-logged when tools update wiki pages, index, logs, or manifest.
 - Financial analysis uses risk, assumption, and uncertainty framing.
 - No direct personalized investment advice.
+- Project navigation pages use frontmatter fields from
+  `specs/002-obsidian-workspace/contracts/obsidian-frontmatter.schema.json`.
 
 ## Preferred Workflow
 

@@ -9,8 +9,11 @@ from deepagents.middleware.filesystem import FilesystemPermission
 
 FINWIKI_MEMORY_FILES = [
     "/AGENTS.md",
-    "/wiki.config.md",
-    "/sources.md",
+    "/finwiki-vault/wiki.config.md",
+    "/finwiki-vault/sources.md",
+    "/finwiki-vault/home.md",
+    "/finwiki-vault/wiki/home.md",
+    "/finwiki-vault/state/day-state.md",
     "/memories/agent.md",
     "/memories/user_preferences.md",
     "/policies/compliance.md",
