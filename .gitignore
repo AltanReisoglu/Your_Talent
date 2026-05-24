@@ -1,10 +1,26 @@
 __pycache__/
 *.py[cod]
+.pytest_cache/
+.mypy_cache/
 .venv/
+venv/
+dist/
+*.egg-info/
 .env
 .env.*
 !.env.example
 .DS_Store
+Thumbs.db
+*.tmp
+*.swp
+.vscode/
+.idea/
+.obsidian/
+finwiki-vault/.obsidian/workspace.json
+finwiki-vault/.obsidian/workspace-mobile.json
+finwiki-vault/.obsidian/cache/
+finwiki-vault/logs/*.jsonl
+/Your_Talent/
 
 # .NET build outputs
 bin/

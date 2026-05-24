@@ -139,6 +139,43 @@ FinWiki, agentmemory'den şu altyapı desenlerini markdown-first finansal wiki'y
 
 Bu katmanlar `/wiki/` yerine geçmez. Sadece retrieval, verification, freshness ve governance kalitesini artırır.
 
+## Memory v2 — Remember, Cite, Forget
+FinWiki memory artık üç güvenilirlik işi olarak değerlendirilir:
+
+1. **Remember by layer**: hot session, direct instruction, canonical policy,
+   day-state, project memory, sourced wiki, behavior memory, retrieval summary
+   ve compressed summary aynı otoriteye sahip değildir.
+2. **Cite by provenance**: final/evidence seviyesinde kullanılacak her memory
+   adayında kaynak yolu, authority level, decision scope ve freshness/validity
+   durumu görünür olmalıdır.
+3. **Forget by expiry**: eski bilgi silinmez; stale, expired veya superseded
+   olarak demote edilir ve gerekirse replacement/review kaydı tutulur.
+
+Authority sırası varsayılan olarak:
+direct instruction → canonical policy → day-state → project memory → sourced
+wiki → behavior memory → retrieval summary → compressed summary. Direct
+instruction compliance/source-quality policy'yi zayıflatmaya çalışıyorsa policy
+üstün gelir.
+
+Memory v2 araçları:
+- `resolve_memory_authority(query, candidates?, page_paths?)`: memory adaylarını
+  otorite, kaynak, decision scope ve expiry açısından sıralar.
+- `mark_wiki_memory_stale(page_path, reason, replacement?, claim_id?)`: wiki
+  sayfasını/claim'i silmeden stale/superseded yapar.
+- `update_day_state(summary, next_actions?, supersedes?, status?)`: bugünün
+  operasyonel whiteboard'unu günceller.
+- `emit_memory_event(event_type, target, payload?, actor?)`: append-only memory
+  event kaydı yazar.
+- `memory_event_graph_report(limit?)`: memory event log'unu replay ederek graph
+  projection ve Obsidian governance sayfaları üretir.
+
+Day-state `finwiki-vault/state/day-state.md` altında tutulur. Operasyonel
+context'tir; finansal fact kaynağı değildir ve policy override edemez.
+
+ActiveGraph'ten alınan fikir dependency olarak değil, mimari desen olarak
+uygulanır: event log source-of-proof, Obsidian insan-okunur knowledge base,
+projection ise denetim yüzeyidir.
+
 ## DeepAgents Memory Sözleşmesi
 FinWiki long-term memory kullanır, ancak bilgi türleri kesin ayrılır:
 - Finansal facts, analizler, şirket verileri, regülasyon notları → `/wiki/`
@@ -146,6 +183,7 @@ FinWiki long-term memory kullanır, ancak bilgi türleri kesin ayrılır:
 - Ajanın nasıl çalıştığına dair öğrenimler → `/memories/agent.md`
 - Kullanıcı tercihleri ve watchlist → `/memories/user_preferences.md`
 - Compliance ve kaynak kalite kuralları → `/policies/` (read-only)
+- Günlük operasyonel whiteboard → `finwiki-vault/state/day-state.md`
 
 Memory dosyaları AGENTS ile beraber agent prompt'una bağlanır. `/policies/**` write-deny permission ile korunur; kullanıcı veya prompt memory üzerinden compliance kurallarını değiştiremez.
 
@@ -159,6 +197,44 @@ FinWiki `/wiki/` klasörü Obsidian vault gibi okunacak şekilde tasarlanır:
 - Görseller ve ekler `/raw/assets/` altında tutulur; wiki sayfaları bunlara göreli link verir.
 - Dataview uyumu için metadata tutarlı olmalıdır.
 - Graph view değerli bir lint yüzeyidir: orphan sayfa, hub sayfa, eksik kavram ve aşırı bağlantı yoğunluğu izlenir.
+
+## Obsidian Project Workspace
+Kullanıcı Obsidian'da repo root'u değil, izole vault klasörünü açar:
+`/home/altan/Desktop/Your_Talent/finwiki-vault`. Bu klasörde kod reposu
+görünmez. Bu artık sadece "compatible" değil: FinWiki'nin canonical knowledge
+base'i izole Obsidian Markdown vault'udur.
+
+Canonical bilgi yüzeyleri:
+- `finwiki-vault/home.md` vault ana sayfasıdır.
+- `finwiki-vault/wiki/index.md` finansal bilgi kataloğudur.
+- `finwiki-vault/wiki/**/*.md` agent'ın kalıcı finansal knowledge base'idir.
+- `finwiki-vault/raw/assets/` Obsidian attachment path'idir.
+- `finwiki-vault/wiki/templates/` manuel Obsidian note template'leridir.
+
+Repo içindeki `wiki/project/` klasörü geliştirici/proje navigasyon katmanıdır;
+kullanıcı vault'una koyulmaz:
+- `wiki/project/index.md` ana proje girişidir.
+- `wiki/project/specs.md` Spec Kit feature index'idir.
+- `wiki/project/features/*.md` feature summary sayfalarıdır.
+- `wiki/project/evidence/index.md` evidence bundle durumunu gösterir.
+- `wiki/project/methodology/` çalışma metodolojisini açıklar.
+
+Canonical execution artefact'leri değişmez: `specs/NNN-feature-name/spec.md`,
+`plan.md`, `tasks.md` ve `evidence.md` her zaman source of truth olarak kalır.
+Obsidian sayfaları sadece link/summarize eder; `.specify/` veya `specs/`
+içeriğini taşımaz, kopyalamaz, replace etmez.
+
+Feature status, tasks veya evidence değiştiğinde
+`scripts/update_obsidian_project_index.py` çalıştırılarak project navigation
+sayfaları güncellenir. Bu script standart kütüphane kullanır ve canonical Spec
+Kit dosyalarını yazmaz.
+
+Agent knowledge base kuralı: `FINWIKI_VAULT_ROOT` varsayılan olarak
+`finwiki-vault` klasörünü gösterir. `read_wiki_page`, `search_wiki`,
+`upsert_wiki_page`, `lint_wiki`, `verify_wiki_claim`, `freshness_report` ve
+`source_lineage` araçları Obsidian vault'un `wiki/` klasörü üzerinde çalışır.
+Agent için durable knowledge store başka bir DB veya SaaS değil, bu Markdown
+vault'tur.
 
 ## Finansal Servisler LLM Wiki İlkeleri
 - Auditability: Her veri noktası kaynak, tarih ve mümkünse kaynak türüyle izlenebilir olmalı.
@@ -315,9 +391,9 @@ Her claim sonuna [Kaynak: URL] ekle. Kaynak yoksa [Kaynak: LLM synthesis] yaz.
 Kullanıcının diline göre cevap ver. Wiki sayfaları İngilizce olsun (evrensel erişim).
 
 <!-- SPECKIT START -->
-Current Spec Kit plan: `specs/002-obsidian-workspace/plan.md`
+Current Spec Kit plan: `specs/003-finwiki-web-app/plan.md`
 
-For this feature, keep Spec Kit artifacts canonical under `specs/` and use
-Obsidian as the navigation/knowledge workspace around specs, FinWiki pages,
-architecture docs, logs, and evidence bundles.
+For this feature, deliver a working browser application by extending the C#
+gateway only. Python remains the agent runtime and C# must not duplicate agent
+reasoning, memory, or wiki mutation logic.
 <!-- SPECKIT END -->

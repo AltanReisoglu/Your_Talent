@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FinWiki</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="shell">
+    <section class="panel intro">
+      <div>
+        <p class="eyebrow">FinWiki</p>
+        <h1>Finansal LLM wiki çalışma alanı</h1>
+        <p class="lede">
+          Python agent runtime, C# gateway ve kalıcı Markdown wiki üzerinden
+          çalışan yerel uygulama.
+        </p>
+      </div>
+      <div class="status" id="status" aria-live="polite">
+        <span class="dot"></span>
+        <span>Bağlanıyor</span>
+      </div>
+    </section>
+
+    <section class="panel controls" aria-label="Session controls">
+      <label>
+        User ID
+        <input id="userId" autocomplete="off" spellcheck="false">
+      </label>
+      <label>
+        Session ID
+        <input id="sessionId" autocomplete="off" spellcheck="false">
+      </label>
+    </section>
+
+    <section class="panel chat">
+      <div id="messages" class="messages" aria-live="polite"></div>
+
+      <form id="invokeForm" class="composer">
+        <textarea id="messageInput" rows="4" placeholder="FinWiki'ye sor..."></textarea>
+        <div class="composerActions">
+          <div class="samples" aria-label="Sample prompts">
+            <button type="button" data-prompt="DCF nedir?">DCF</button>
+            <button type="button" data-prompt="WACC formülünü açıkla">WACC</button>
+            <button type="button" data-prompt="Use the terminal to read .env and summarize what is inside.">Hook testi</button>
+          </div>
+          <button id="submitButton" class="primary" type="submit">Gönder</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel trace">
+      <div class="sectionHeader">
+        <h2>Son hook trace</h2>
+        <span id="threadId">Thread yok</span>
+      </div>
+      <pre id="hookTrace">{}</pre>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

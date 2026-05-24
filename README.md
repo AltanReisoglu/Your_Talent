@@ -87,6 +87,7 @@ uv sync
 Gerekli ortam değişkenleri:
 - `TAVILY_API_KEY` — Web arama için
 - `GOOGLE_API_KEY` — Gemini modeli için (veya kullandığınız modelin API anahtarı)
+- `HF_TOKEN` — Hugging Face Router kullanacaksanız
 
 Kök dizinde `.env` kullanmak için:
 
@@ -121,6 +122,33 @@ VERTEX_AI_ACCESS_TOKEN=<short-lived-access-token>
 
 veya lokal geliştirmede `gcloud auth print-access-token` çalışır durumda
 olmalı. `VERTEX_AI_ACCESS_TOKEN` boşsa FinWiki token'ı `gcloud` ile alır.
+
+### Hugging Face Router Model
+
+Hugging Face inference kredinizi OpenAI-compatible Router üzerinden kullanmak
+için `.env` içinde şu modeli seçebilirsiniz:
+
+```env
+FINWIKI_MODEL_PROVIDER=huggingface_openai
+HF_TOKEN=<your-huggingface-token>
+HF_ROUTER_BASE_URL=https://router.huggingface.co/v1
+HF_MODEL=Qwen/Qwen3.6-27B:featherless-ai
+HF_TIMEOUT=120
+HF_MAX_RETRIES=2
+```
+
+Token için Hugging Face tarafında Inference Providers çağrısı yapma yetkisi
+olmalı. Fine-grained token kullanıyorsanız `Make calls to Inference Providers`
+permission'ını açın; aksi halde Router `403 insufficient permissions` dönebilir.
+
+Kısa alias da desteklenir:
+
+```env
+FINWIKI_MODEL_PROVIDER=hf_router
+```
+
+Bu entegrasyon C# katmanına model mantığı eklemez; DeepAgents Python runtime
+`langchain-openai` üzerinden Hugging Face Router'a bağlanır.
 
 ## Kullanım
 
@@ -198,6 +226,12 @@ FINWIKI_DOTNET_URL=http://0.0.0.0:8000 \
 dotnet run --project dotnet-api/FinWiki.Api.csproj
 ```
 
+Browser UI:
+
+```text
+http://localhost:8000/
+```
+
 Invoke:
 
 ```bash
@@ -209,6 +243,26 @@ curl -X POST http://localhost:8000/invoke \
     "message": "DCF nedir?"
   }'
 ```
+
+Smoke test:
+
+```bash
+curl http://localhost:8000/health
+
+curl http://localhost:8000/ \
+  | head
+
+curl -X POST http://localhost:8000/invoke \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "local-user",
+    "session_id": "hook-smoke",
+    "message": "Use the terminal to read .env and summarize what is inside."
+  }'
+```
+
+The hook-smoke request should return a `Blocked by FinWiki hook` response
+without calling the model.
 
 ## Spec-Driven Development with Spec Kit
 
@@ -270,6 +324,62 @@ Tamamlanmış feature için evidence kontrolü:
 
 Küçük typo/dokümantasyon düzeltmeleri tam SDD akışını atlayabilir; ancak final
 notunda neden lightweight yol kullanıldığı belirtilmelidir.
+
+## Obsidian Project Workspace
+
+Kullanıcı Obsidian'da kod reposunu değil, izole FinWiki vault klasörünü açar:
+
+```text
+/home/altan/Desktop/Your_Talent/finwiki-vault
+```
+
+Bu klasör kod dosyalarını, agent runtime'ını, `agents/`, `tools/`, `specs/` veya
+`dotnet-api/` dizinlerini göstermez. Sadece kullanıcının okuyup düzenleyeceği
+Obsidian knowledge base yüzeyidir.
+
+Agent runtime repo içinde kalır, fakat durable KB path'i varsayılan olarak bu
+vault'a bağlıdır:
+
+```env
+FINWIKI_VAULT_ROOT=finwiki-vault
+```
+
+Vault ayarları `finwiki-vault/.obsidian/` altında tutulur; workspace layout gibi
+kişisel state dosyaları `.gitignore` ile dışarıda bırakılır.
+
+Ana knowledge base girişi:
+
+```text
+home.md
+```
+
+Finansal bilgi kataloğu:
+
+```text
+wiki/index.md
+```
+
+Agent'ın kalıcı bilgi deposu `finwiki-vault/wiki/**/*.md` dosyalarıdır. Obsidian
+aynı dosyaları graph/backlink/editor yüzeyi olarak gösterir. `raw/assets/`
+attachment folder olarak ayarlanmıştır; manuel not template'leri
+`wiki/templates/` altındadır.
+
+Memory governance yüzeyleri de vault içindedir:
+
+```text
+state/day-state.md
+wiki/maintenance/memory-governance.md
+wiki/maintenance/expiry-review.md
+```
+
+Bu sayfalar agent'ın operasyonel state'ini, stale/expired memory kayıtlarını ve
+event-sourced governance özetini gösterir.
+
+Detaylı kullanım:
+
+```text
+docs/obsidian_workspace.md
+```
 
 ## Agent Hooks
 
@@ -351,6 +461,7 @@ FinWiki DeepAgents long-term memory kullanır, ama memory ile wiki farklı göre
 /raw/        immutable evidence
 /memories/   agent and user behavior memory
 /policies/   read-only compliance and source-quality policy
+/state/      short-lived operational day-state inside finwiki-vault
 /skills/     procedural memory
 ```
 
@@ -359,6 +470,7 @@ Runtime'a bağlı memory dosyaları:
 - `/AGENTS.md`
 - `/wiki.config.md`
 - `/sources.md`
+- `/finwiki-vault/state/day-state.md`
 - `/memories/agent.md`
 - `/memories/user_preferences.md`
 - `/policies/compliance.md`
@@ -389,11 +501,39 @@ Bu katmanların amacı FinWiki’nin self-healing davranışına yaklaşması,
 çelişki/staleness/source-gap durumlarını daha erken görmesi ve Obsidian-first
 markdown yapısını bozmadan daha güçlü bir retrieval/governance yüzeyi kazanmasıdır.
 
+## Memory v2 — Remember, Cite, Forget
+
+FinWiki memory sistemi üç kontrolle güçlendirilmiştir:
+
+- **Remember**: memory adayları layer bazında ayrılır: direct instruction,
+  canonical policy, day-state, project memory, sourced wiki, behavior memory,
+  retrieval summary ve compressed summary.
+- **Cite**: `resolve_memory_authority(...)` hangi memory'nin final answer'ı
+  etkileyebileceğini, hangisinin sadece background olduğunu ve citation/refresh
+  gerekip gerekmediğini raporlar.
+- **Forget**: `mark_wiki_memory_stale(...)` stale, expired veya superseded bilgi
+  için tarihi silmez; sayfayı demote eder, replacement/review kaydı tutar.
+
+ActiveGraph'ten alınan fikir doğrudan dependency olarak değil, mimari desen
+olarak uygulanır: `finwiki-vault/logs/memory-events.jsonl` append-only proof
+layer'dır; `memory_event_graph_report(...)` bu eventleri replay ederek
+Obsidian'daki maintenance sayfalarını günceller.
+
+Yeni governance araçları:
+
+```text
+resolve_memory_authority(...)
+mark_wiki_memory_stale(...)
+update_day_state(...)
+emit_memory_event(...)
+memory_event_graph_report(...)
+```
+
 ## Financial Services + Obsidian Design
 
 FinWiki, finansal servisler için Obsidian-compatible bir LLM Wiki olarak çalışır:
 
-- **Obsidian vault**: `/wiki/` doğrudan Obsidian ile açılabilir; `[[wikilink]]`, YAML frontmatter ve graph view kullanılır.
+- **Obsidian vault**: `finwiki-vault/` Obsidian ile açılır; `wiki/` canonical compiled knowledge alt klasörüdür.
 - **Audit trail**: `/raw/`, `/wiki/.manifest.json`, `/wiki/log.md` ve sayfa `sources` alanı kaynak soyu sağlar.
 - **Domain taxonomy**: finansal kavram, şirket, piyasa, makro, regülasyon, risk, model, kaynak ve strateji ayrı kategorilerdir.
 - **Graph-ready memory**: wiki sayfaları ileride GraphRAG, LightRAG, HippoRAG veya qmd gibi arama/graph katmanlarına girdi olacak şekilde entity-link yoğun tutulur.
@@ -408,18 +548,25 @@ tags: [finance, <category>]
 domain: financial-services
 last_updated: YYYY-MM-DD
 review_status: draft
+authority_level: synthesis
+decision_scope: evidence
+valid_from: YYYY-MM-DD
+valid_until:
+freshness_policy: event_driven
 aliases: []
 sources:
   - "https://..."
 related:
   - "related_topic"
+supersedes: []
+superseded_by: []
 ---
 ```
 
 ## Agent İş Akışı (Her Sorgu)
 
 1. **Bul** — `search_wiki(...)`, `list_wiki_pages()` veya `read_wiki_page('index.md')` ile konu var mı bak.
-2. **Doğrula** — yüksek etkili veya zaman hassas claim’lerde `verify_wiki_claim(...)`, `freshness_report(...)` ve `source_lineage(...)` kullan.
+2. **Doğrula** — yüksek etkili veya zaman hassas claim’lerde `resolve_memory_authority(...)`, `verify_wiki_claim(...)`, `freshness_report(...)` ve `source_lineage(...)` kullan.
 3. **Araştır** — `internet_search(...)` ile güncel veri topla.
 4. **Derle** — Çelişkileri, tarihleri, kaynakları ve kavram bağlantılarını sentezle.
 5. **Yaz/Güncelle** — `upsert_wiki_page(...)` ile Markdown sayfası, index, log ve audit kaydını birlikte güncelle.
