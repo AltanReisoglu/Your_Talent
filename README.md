@@ -381,6 +381,42 @@ Detaylı kullanım:
 docs/obsidian_workspace.md
 ```
 
+### Obsidian Agent Plugin
+
+FinWiki ayrıca yerel bir Obsidian plugin olarak da kullanılabilir. Plugin,
+Obsidian içinden mevcut C# gateway `/invoke` endpoint'ine konuşur; agent
+reasoning, memory, ingest, query ve lint mantığı yine Python runtime'da kalır.
+
+Plugin kaynak kodu:
+
+```text
+obsidian-plugin/finwiki-agent/
+```
+
+Vault içine kurulum:
+
+```bash
+.venv/bin/python scripts/install_obsidian_plugin.py
+```
+
+Gateway'i çalıştır:
+
+```bash
+DOTNET_CLI_HOME=/tmp/dotnet \
+FINWIKI_DOTNET_URL=http://0.0.0.0:8000 \
+dotnet run --project dotnet-api/FinWiki.Api.csproj
+```
+
+Sonra Obsidian'da `finwiki-vault` açılır ve Community plugins altında
+**FinWiki Agent** etkinleştirilir.
+
+Komutlar:
+
+- `FinWiki: Ask FinWiki`
+- `FinWiki: Ask FinWiki about selection/current note`
+- `FinWiki: Ingest current note`
+- `FinWiki: Run wiki lint`
+
 ## Agent Hooks
 
 FinWiki'de hook katmanı `app/hooks.py` içindedir. Bu katman prompt'a bağlı

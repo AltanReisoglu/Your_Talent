@@ -391,9 +391,10 @@ Her claim sonuna [Kaynak: URL] ekle. Kaynak yoksa [Kaynak: LLM synthesis] yaz.
 Kullanıcının diline göre cevap ver. Wiki sayfaları İngilizce olsun (evrensel erişim).
 
 <!-- SPECKIT START -->
-Current Spec Kit plan: `specs/003-finwiki-web-app/plan.md`
+Current Spec Kit plan: `specs/005-obsidian-agent-plugin/plan.md`
 
-For this feature, deliver a working browser application by extending the C#
-gateway only. Python remains the agent runtime and C# must not duplicate agent
-reasoning, memory, or wiki mutation logic.
+For this feature, deliver a local Obsidian plugin as a thin UI/transport layer
+over the existing C# gateway `/invoke` endpoint. Python remains the agent
+runtime; the plugin must not duplicate agent reasoning, memory, or wiki mutation
+logic.
 <!-- SPECKIT END -->
