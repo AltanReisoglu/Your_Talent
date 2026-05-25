@@ -14,6 +14,8 @@ Implemented a store-targeted FinWiki mobile MVP scaffold:
 - Store readiness docs for Apple App Store and Google Play
 - Privacy inventory and release checklist
 - Python contract tests for the wiki API bridge
+- App shell lives under `mobile/finwiki/src/shell/` to avoid Expo Router
+  auto-detecting `src/app/` as a router root.
 
 The mobile app remains a thin client. Python remains the agent runtime and wiki
 harness owner. The app does not contain model/provider keys and does not write

@@ -3,6 +3,20 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
+var allowedOrigins = (Environment.GetEnvironmentVariable("FINWIKI_ALLOWED_ORIGINS") ??
+    "http://localhost:8081,http://127.0.0.1:8081,http://localhost:19006,http://127.0.0.1:19006")
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("FinWikiLocalClients", policy =>
+    {
+        policy.WithOrigins(allowedOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 var app = builder.Build();
 var jsonOptions = new JsonSerializerOptions
 {
@@ -10,6 +24,7 @@ var jsonOptions = new JsonSerializerOptions
     WriteIndented = false
 };
 
+app.UseCors("FinWikiLocalClients");
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
