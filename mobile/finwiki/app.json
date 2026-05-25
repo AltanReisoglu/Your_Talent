@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "FinWiki",
+    "slug": "finwiki",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "scheme": "finwiki",
+    "platforms": ["ios", "android"],
+    "ios": {
+      "bundleIdentifier": "com.altanreisoglu.finwiki",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.altanreisoglu.finwiki"
+    },
+    "extra": {
+      "apiBaseUrlEnv": "EXPO_PUBLIC_FINWIKI_API_BASE_URL"
+    }
+  }
+}

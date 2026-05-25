@@ -29,3 +29,18 @@ obj/
 # Agent hook runtime state
 .hook-state/
 reports/
+
+# Node / Expo mobile app
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.expo/
+.expo-shared/
+web-build/
+mobile/finwiki/dist/
+mobile/finwiki/build/
+mobile/finwiki/.env
+mobile/finwiki/.env.*
+!mobile/finwiki/.env.example

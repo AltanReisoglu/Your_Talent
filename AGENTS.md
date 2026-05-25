@@ -391,10 +391,11 @@ Her claim sonuna [Kaynak: URL] ekle. Kaynak yoksa [Kaynak: LLM synthesis] yaz.
 Kullanıcının diline göre cevap ver. Wiki sayfaları İngilizce olsun (evrensel erişim).
 
 <!-- SPECKIT START -->
-Current Spec Kit plan: `specs/005-obsidian-agent-plugin/plan.md`
+Current Spec Kit plan: `specs/006-mobile-store-app/plan.md`
 
-For this feature, deliver a local Obsidian plugin as a thin UI/transport layer
-over the existing C# gateway `/invoke` endpoint. Python remains the agent
-runtime; the plugin must not duplicate agent reasoning, memory, or wiki mutation
-logic.
+For this feature, plan the iOS/Android store app as a thin mobile client over a
+hosted FinWiki backend. Python remains the agent runtime; the mobile app must
+not duplicate agent reasoning, memory, or wiki mutation logic, and must satisfy
+App Store / Google Play privacy and finance-adjacent policy gates before public
+release.
 <!-- SPECKIT END -->
