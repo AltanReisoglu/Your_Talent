@@ -86,7 +86,154 @@ app.MapPost("/invoke", async (InvokeRequest request) =>
     }
 });
 
+app.MapGet("/wiki/search", async (string q, string? category, int? limit) =>
+{
+    if (string.IsNullOrWhiteSpace(q))
+    {
+        return Results.BadRequest(new
+        {
+            error = new
+            {
+                code = "query_required",
+                message = "q is required.",
+                retryable = false
+            }
+        });
+    }
+
+    return await RunPythonJsonScript("scripts/wiki_api.py", new
+    {
+        operation = "search",
+        query = q,
+        category,
+        limit = limit ?? 10
+    }, jsonOptions);
+});
+
+app.MapGet("/wiki/page", async (string path) =>
+{
+    if (string.IsNullOrWhiteSpace(path))
+    {
+        return Results.BadRequest(new
+        {
+            error = new
+            {
+                code = "path_required",
+                message = "path is required.",
+                retryable = false
+            }
+        });
+    }
+
+    return await RunPythonJsonScript("scripts/wiki_api.py", new
+    {
+        operation = "page",
+        path
+    }, jsonOptions);
+});
+
+app.MapPost("/ingest-submissions", async (IngestSubmissionRequest request) =>
+{
+    return await RunPythonJsonScript("scripts/wiki_api.py", new
+    {
+        operation = "ingest_submission",
+        request.UserId,
+        request.Type,
+        request.Content,
+        request.Notes
+    }, jsonOptions);
+});
+
+app.MapPost("/account/delete", async (AccountDeleteRequest request) =>
+{
+    return await RunPythonJsonScript("scripts/wiki_api.py", new
+    {
+        operation = "account_delete",
+        request.UserId,
+        request.Confirmation
+    }, jsonOptions);
+});
+
 app.Run(Environment.GetEnvironmentVariable("FINWIKI_DOTNET_URL") ?? "http://0.0.0.0:8000");
+
+static async Task<IResult> RunPythonJsonScript(
+    string scriptPath,
+    object payload,
+    JsonSerializerOptions jsonOptions
+)
+{
+    var repoRoot = FindRepoRoot();
+    var pythonPath = ResolvePythonPath(repoRoot);
+    var serializedPayload = JsonSerializer.Serialize(payload, jsonOptions);
+
+    var startInfo = new ProcessStartInfo
+    {
+        FileName = pythonPath,
+        Arguments = scriptPath,
+        WorkingDirectory = repoRoot,
+        RedirectStandardInput = true,
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+        UseShellExecute = false
+    };
+
+    startInfo.Environment["PYTHONUNBUFFERED"] = "1";
+
+    using var process = Process.Start(startInfo);
+    if (process is null)
+    {
+        return Results.Problem("Failed to start Python FinWiki worker.");
+    }
+
+    await process.StandardInput.WriteAsync(serializedPayload);
+    process.StandardInput.Close();
+
+    var stdoutTask = process.StandardOutput.ReadToEndAsync();
+    var stderrTask = process.StandardError.ReadToEndAsync();
+
+    await process.WaitForExitAsync();
+
+    var stdout = await stdoutTask;
+    var stderr = await stderrTask;
+
+    if (process.ExitCode != 0)
+    {
+        return Results.Problem(
+            detail: Redact(stderr),
+            title: "Python FinWiki worker failed",
+            statusCode: 502
+        );
+    }
+
+    try
+    {
+        var response = JsonSerializer.Deserialize<JsonElement>(stdout, jsonOptions);
+        if (response.ValueKind == JsonValueKind.Object &&
+            response.TryGetProperty("error", out var error) &&
+            error.ValueKind == JsonValueKind.Object)
+        {
+            var statusCode = 400;
+            if (error.TryGetProperty("code", out var code) &&
+                code.ValueKind == JsonValueKind.String &&
+                code.GetString() == "wiki_page_not_found")
+            {
+                statusCode = 404;
+            }
+
+            return Results.Json(response, jsonOptions, statusCode: statusCode);
+        }
+
+        return Results.Json(response, jsonOptions);
+    }
+    catch (JsonException)
+    {
+        return Results.Problem(
+            detail: Redact(stdout),
+            title: "Python worker returned invalid JSON",
+            statusCode: 502
+        );
+    }
+}
 
 static string FindRepoRoot()
 {
@@ -136,4 +283,16 @@ record InvokeResponse(
     [property: JsonPropertyName("thread_id")] string ThreadId,
     [property: JsonPropertyName("response")] string Response,
     [property: JsonPropertyName("hooks")] JsonElement? Hooks
+);
+
+record IngestSubmissionRequest(
+    [property: JsonPropertyName("user_id")] string UserId,
+    [property: JsonPropertyName("type")] string Type,
+    [property: JsonPropertyName("content")] string Content,
+    [property: JsonPropertyName("notes")] string? Notes
+);
+
+record AccountDeleteRequest(
+    [property: JsonPropertyName("user_id")] string UserId,
+    [property: JsonPropertyName("confirmation")] bool Confirmation
 );
