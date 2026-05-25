@@ -34,18 +34,23 @@ Sonuç: **Bir finansal wikipedia** oluşturur.
 │       ├── agent.py              # CLI/default sync fan-out host agent
 │       └── async_agent.py        # Optional AsyncSubAgent supervisor graph
 ├── docs/
-│   └── financial_services_llm_wiki_architecture.md
+│   ├── financial_services_llm_wiki_architecture.md
+│   └── store/                    # App Store / Google Play release artefacts
 ├── app/
-│   ├── main.py                   # FastAPI HTTP runtime
+│   ├── main.py                   # Optional FastAPI HTTP runtime
 │   ├── schemas.py                # API request/response models
 │   └── service.py                # Agent invoke wrapper
+├── dotnet-api/                   # C# API gateway/BFF for web, plugin, mobile
 ├── derived/                      # Generated artifacts before wiki promotion
+├── finwiki-vault/                # Isolated Obsidian vault knowledge base
 ├── langgraph.json                # Optional Agent Protocol graph registry
 ├── logs/
 │   ├── audit-log.jsonl           # Machine-readable mutation/provenance events
 │   ├── agent-observations.jsonl  # Workflow/session observations, not wiki facts
 │   └── maintenance-log.md        # Manual maintenance/lint decisions
 ├── memories/                     # Writable agent/default-user long-term memory
+├── mobile/
+│   └── finwiki/                  # Expo iOS/Android/web thin client
 ├── policies/                     # Read-only financial services policies
 ├── prompts/                      # Local workflow prompt templates
 ├── raw/                          # Immutable source layer
@@ -210,7 +215,8 @@ Bu akış `compose.yaml` üzerinden:
 
 Python agent runtime aynı kalır; C# yalnızca kullanıcı input/output gateway'i
 olarak çalışır. C# API, `scripts/invoke_agent.py` bridge script'ini subprocess
-olarak çağırır.
+olarak çağırır. Mobil uygulama, Obsidian plugin ve hafif web UI için önerilen
+lokal gateway budur.
 
 Build:
 
@@ -224,6 +230,22 @@ Run:
 DOTNET_CLI_HOME=/tmp/dotnet \
 FINWIKI_DOTNET_URL=http://0.0.0.0:8000 \
 dotnet run --project dotnet-api/FinWiki.Api.csproj
+```
+
+Expo web veya başka browser tabanlı lokal istemciler için CORS varsayılan olarak
+şu origin'lere açıktır:
+
+```text
+http://localhost:8081
+http://127.0.0.1:8081
+http://localhost:19006
+http://127.0.0.1:19006
+```
+
+Gerekirse override:
+
+```bash
+FINWIKI_ALLOWED_ORIGINS=http://localhost:8081,https://your-client.example
 ```
 
 Browser UI:
@@ -263,6 +285,73 @@ curl -X POST http://localhost:8000/invoke \
 
 The hook-smoke request should return a `Blocked by FinWiki hook` response
 without calling the model.
+
+Mobile/wiki endpoints:
+
+```bash
+curl 'http://localhost:8000/wiki/search?q=DCF&limit=1'
+
+curl 'http://localhost:8000/wiki/page?path=concepts/discounted-cash-flow-dcf.md'
+```
+
+## Mobile App (Expo)
+
+FinWiki Mobile, App Store / Google Play için hazırlanmış ince istemcidir.
+Telefonda model anahtarı, Python runtime, wiki mutation mantığı veya agent
+reasoning yoktur. Uygulama sadece hosted/C# FinWiki backend ile konuşur.
+
+Terminal 1 — gateway:
+
+```bash
+DOTNET_CLI_HOME=/tmp/dotnet \
+FINWIKI_DOTNET_URL=http://0.0.0.0:8000 \
+dotnet run --project dotnet-api/FinWiki.Api.csproj
+```
+
+Terminal 2 — Expo:
+
+```bash
+cd mobile/finwiki
+npm install
+cp .env.example .env
+# .env içinde lokal test için:
+# EXPO_PUBLIC_FINWIKI_API_BASE_URL=http://127.0.0.1:8000
+npx expo start --localhost --port 8081
+```
+
+Web preview:
+
+```text
+http://localhost:8081
+```
+
+Fiziksel telefon testinde `127.0.0.1` telefonun kendisini gösterir. Bu yüzden
+`.env` içindeki `EXPO_PUBLIC_FINWIKI_API_BASE_URL` bilgisini bilgisayarın LAN
+adresi veya güvenli tunnel URL'i ile değiştirin ve backend'in o adresten
+erişilebilir olduğundan emin olun.
+
+Mobil doğrulama:
+
+```bash
+cd mobile/finwiki
+npm run typecheck
+```
+
+Backend doğrulama:
+
+```bash
+dotnet build dotnet-api/FinWiki.Api.csproj
+.venv/bin/python -m pytest tests/test_wiki_api_bridge.py
+```
+
+Store hazırlık dosyaları:
+
+```text
+docs/store/privacy-inventory.md
+docs/store/app-store-connect.md
+docs/store/google-play-console.md
+docs/store/release-checklist.md
+```
 
 ## Spec-Driven Development with Spec Kit
 
