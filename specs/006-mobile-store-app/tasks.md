@@ -42,7 +42,7 @@
 **Independent Test**: Configure `EXPO_PUBLIC_FINWIKI_API_BASE_URL`, run the app, submit "DCF nedir?", and see a response or recoverable backend error without losing the prompt.
 
 - [x] T008 [US1] Implement chat state, request handling, and recoverable errors in `mobile/finwiki/src/features/chat/ChatScreen.tsx`
-- [x] T009 [US1] Implement app shell and tab navigation in `mobile/finwiki/src/app/App.tsx` and `mobile/finwiki/App.tsx`
+- [x] T009 [US1] Implement app shell and tab navigation in `mobile/finwiki/src/shell/App.tsx` and `mobile/finwiki/App.tsx`
 - [x] T010 [US1] Surface financial education disclaimer and hook/error status in `mobile/finwiki/src/features/chat/ChatScreen.tsx`
 
 **Checkpoint**: User Story 1 is independently testable.
