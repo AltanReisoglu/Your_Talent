@@ -1,0 +1,10 @@
+{
+  "id": "finwiki-agent",
+  "name": "FinWiki Agent",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Operate the local FinWiki agent from inside an Obsidian vault.",
+  "author": "FinWiki",
+  "authorUrl": "https://github.com/AltanReisoglu/Your_Talent",
+  "isDesktopOnly": true
+}

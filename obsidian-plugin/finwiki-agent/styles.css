@@ -1,0 +1,29 @@
+.finwiki-modal .modal-content {
+  max-width: 760px;
+}
+
+.finwiki-prompt {
+  box-sizing: border-box;
+  min-height: 220px;
+  width: 100%;
+  resize: vertical;
+  font-family: var(--font-monospace);
+}
+
+.finwiki-response {
+  max-height: 55vh;
+  overflow: auto;
+  white-space: pre-wrap;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 12px;
+  background: var(--background-secondary);
+  font-family: var(--font-text);
+}
+
+.finwiki-meta {
+  margin-top: 8px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  overflow-wrap: anywhere;
+}

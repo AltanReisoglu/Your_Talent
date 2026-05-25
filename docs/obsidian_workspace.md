@@ -117,6 +117,24 @@ Allowed `type` values are documented in
 No Obsidian plugin is required for the core workflow. The pages are plain
 Markdown and can be browsed with any editor.
 
+FinWiki also ships a local optional plugin:
+
+```text
+obsidian-plugin/finwiki-agent/
+```
+
+Install it into the isolated vault with:
+
+```bash
+.venv/bin/python scripts/install_obsidian_plugin.py
+```
+
+The plugin is a thin UI layer over the existing C# gateway. It can ask FinWiki,
+send selected text or the active note as context, request current-note ingest,
+and run wiki lint. It does not mutate `wiki/index.md`, `wiki/log.md`, or the
+manifest directly; durable wiki changes still go through the Python agent and
+wiki-ingestor path.
+
 Optional improvements:
 
 ```dataview
