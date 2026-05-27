@@ -1,4 +1,4 @@
-# FinWiki — Financial LLM Wiki Harnesses
+# FinWiki — Financial LLM Wiki Harnesses & Scaffolds
 
 > Andrej Karpathy'nin **LLM Wiki** mantığına dayalı, kalıcı ve birikimli bir finansal bilgi tabanı ajansı.
 
