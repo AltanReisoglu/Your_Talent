@@ -2,7 +2,7 @@
 
 > Andrej Karpathy'nin **LLM Wiki** mantığına dayalı, kalıcı ve birikimli bir finansal bilgi tabanı ajansı.
 
-## Felsefe
+##  Felsefe
 
 Geleneksel LLM sohbetlerinde bilgi sohbet bağlamında yaşar ve sıfırlanır.
 **Karpathy LLM Wiki** yaklaşımı, modelin uzun süreli hafızasını düz metin dosyalarına (Markdown) yazar.
